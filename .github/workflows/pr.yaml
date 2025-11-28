@@ -1,0 +1,76 @@
+name: Test PR
+on:
+  pull_request:
+    paths:
+      - "sources/**"
+      - "templates/**"
+      - ".github/workflows/pr.yaml"
+
+jobs:
+  tests:
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_CACHE_SIZE: 2G
+      SCCACHE_VERSION: 0.3.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get changed files
+        id: files
+        uses: Ana06/get-changed-files@v2.2.0
+        with:
+          format: json
+      - name: Cache rust stuff
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cargo/bin
+            sources/**/target
+          key: ${{ runner.os }}-cargo3-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo3-
+      - name: sccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-sccache-
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          target: wasm32-unknown-unknown
+      - name: Install build dependencies
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sccache
+          if ! command -v buny >/dev/null 2>&1; then
+            cargo install --git https://github.com/BunyApp/buny-rs buny-cli
+          fi
+      - name: Build sources
+        run: |
+          readarray -t TEMP <<< "$(jq -r '.[]' <<<'${{ steps.files.outputs.added_modified }}')"
+
+          while IFS= read -r -d $'\0' i; do
+            if [[ "$i" == *"sources"* ]]; then
+              (
+                cd "$i"
+                buny package
+              )
+            fi
+          done < <(printf "%s\n" "${TEMP[@]}" | cut -d'/' -f-2 | sort -u | grep 'sources' | tr '\n' '\0')
+      - name: Test if sources are valid
+        run: buny verify sources/*/package.bunpack
+      - name: Flatten packages directory
+        if: always()
+        run: buny build sources/*/package.bunpack
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: packages
+          path: public/sources/*.bunpack
+          if-no-files-found: ignore
