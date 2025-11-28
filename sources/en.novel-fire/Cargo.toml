@@ -1,0 +1,27 @@
+[package]
+name = "novelfire"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+buny = { git = "https://github.com/BunyApp/buny-rs.git", version = "0.1.0" }
+
+[dev-dependencies]
+buny = { git = "https://github.com/BunyApp/buny-rs.git", features = ["test"] }
+buny-test = { git = "https://github.com/BunyApp/buny-rs.git" }
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+strip = true
+lto = true
+
+[lints.clippy]
+unnecessary_filter_map = "allow"
+

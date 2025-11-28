@@ -1,0 +1,30 @@
+{
+	"info": {
+		"id": "novelfire",
+		"name": "Novel Fire",
+		"version": 1,
+		"url": "https://novelfire.net",
+		"contentRating": 0,
+		"languages": [
+			"en"
+		]
+	},
+	"listings": [
+		{
+			"id": "overall-ranking",
+			"name": "Overall Rankings"
+		},
+		{
+			"id": "ratings",
+			"name": "Ratings"
+		},
+		{
+			"id": "most-review",
+			"name": "Most Reviewed"
+		},
+		{
+			"id": "most-lib",
+			"name": "Most in Library"
+		}
+	]
+}
