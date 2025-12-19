@@ -29,8 +29,10 @@ impl ListingProvider for NovelFire {
 						.select_first("a")?
 						.attr("href")?
 						.to_string()
-						.replace("https://novelfire.net/book/", "");
-					let cover = novel_node.select_first("img")?.attr("data-src")?;
+						.replace("/book/", "");
+
+					let cover = BASE_URL.to_string()
+						+ novel_node.select_first("img")?.attr("data-src")?.as_str();
 					let title = String::from(
 						novel_node
 							.select_first("a:not(:has(img))")?
