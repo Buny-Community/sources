@@ -42,8 +42,6 @@ impl Source for NovelFire {
 			query.unwrap_or_default(),
 			page
 		);
-		print("url is:");
-		print(&url);
 		let html = Request::get(&url)?.html()?;
 		let entries: Vec<Novel> = html
 			.select(".novel-list.chapters > li.novel-item")
@@ -53,13 +51,14 @@ impl Source for NovelFire {
 						.select_first("a")?
 						.attr("href")?
 						.to_string()
-						.replace("https://novelfire.net/book/", "");
+						.replace("/book/", "");
 					let title = novel_node.select_first("a")?.attr("title")?.to_string();
 
-					let cover = novel_node
-						.select_first(".cover-wrap img")?
-						.attr("src")?
-						.to_string();
+					let cover = format!(
+						"{}/{}",
+						&BASE_URL,
+						novel_node.select_first("img")?.attr("src")?
+					);
 
 					Some(Novel {
 						key,
