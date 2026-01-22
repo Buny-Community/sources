@@ -92,13 +92,11 @@ impl Source for NovelFire {
 		let url = format!("{}/book/{}", &BASE_URL, novel.key);
 		let html = Request::get(&url)?.html()?;
 
-		println!("Selecting post id...");
 		let post_id = html
 			.select_first("#novel-report")
 			.unwrap()
 			.attr("report-post_id")
 			.unwrap_or_default();
-		println!("Post id: {}", &post_id);
 
 		if needs_details {
 			let main_div = html.select_first(".cover img").unwrap();
@@ -189,8 +187,8 @@ impl Source for NovelFire {
 			.select("#content p")
 			.map(|els| {
 				els.filter_map(|content_node| {
-					// paragraph might have a "read at website" element in it so we use own_text.
-					let content = content_node.own_text()?.to_string();
+					let content = content_node.text()?.to_string();
+
 					if content.starts_with('[') && content.ends_with(']') {
 						let mut quote = content.chars();
 						quote.next();
