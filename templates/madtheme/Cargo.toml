@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 buny = { git = "https://github.com/BunyApp/buny-rs.git", version = "0.1.0", features = ["json"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 buny = { git = "https://github.com/BunyApp/buny-rs.git", features = ["test"] }

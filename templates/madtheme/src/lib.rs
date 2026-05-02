@@ -1,10 +1,8 @@
 #![no_std]
 use buny::{
-	Chapter, ContentBlock, ContentRating, FilterValue, Home, HomeLayout, Listing, ListingProvider,
+	Chapter, ContentBlock, ContentRating, FilterValue, Listing, ListingProvider,
 	Novel, NovelPageResult, Result, Source,
 	alloc::{String, Vec, borrow::Cow},
-	imports::net::Request,
-	println,
 };
 
 mod helpers;
@@ -14,6 +12,7 @@ pub use imp::Impl;
 
 pub struct Params {
 	pub base_url: Cow<'static, str>,
+	pub api_url: Cow<'static, str>,
 	pub novel_path: Cow<'static, str>,
 	pub use_slug_search: bool,
 	pub default_rating: ContentRating,
@@ -24,6 +23,7 @@ impl Default for Params {
 	fn default() -> Self {
 		Self {
 			base_url: "".into(),
+			api_url: "".into(),
 			novel_path: "novel".into(),
 			use_slug_search: false,
 			default_rating: ContentRating::default(),

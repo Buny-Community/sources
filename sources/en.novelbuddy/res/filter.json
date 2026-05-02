@@ -1,10 +1,10 @@
 [
 	{
 		"type": "multi-select",
-		"id": "genre[]",
+		"id": "genres",
 		"title": "Genres",
 		"isGenre": true,
-		"canExclude": false,
+		"canExclude": true,
 		"options": [
 			"Action",
 			"Action Adventure",
@@ -188,13 +188,29 @@
 		"type": "select",
 		"id": "status",
 		"title": "Status",
-		"options": ["All", "Ongoing", "Completed"],
-		"ids": ["all", "ongoing", "completed"]
+		"options": [
+			"All",
+			"Ongoing",
+			"Completed"
+		],
+		"ids": [
+			"all",
+			"ongoing",
+			"completed"
+		]
 	},
 	{
 		"type": "sort",
 		"id": "sort",
 		"canAscend": false,
-		"options": ["Views", "Updated", "Created", "Name A-Z", "Rating"]
+		"options": [
+			"Default Order",
+			"Latest Updated",
+			"Most Popular",
+			"Highest Rating",
+			"Most Viewed",
+			"Most Chapters",
+			"A-Z"
+		]
 	}
 ]
