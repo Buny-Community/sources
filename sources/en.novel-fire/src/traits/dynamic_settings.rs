@@ -21,17 +21,15 @@ impl DynamicSettings for NovelFire {
 			}
 			.into(),
 		];
-		if let Some(value) = toggle_value {
-			if value {
-				settings.push(
-					ToggleSetting {
-						key: "setting2".into(),
-						title: "Toggle 2".into(),
-						..Default::default()
-					}
-					.into(),
-				);
-			}
+		if let Some(true) = toggle_value {
+			settings.push(
+				ToggleSetting {
+					key: "setting2".into(),
+					title: "Toggle 2".into(),
+					..Default::default()
+				}
+				.into(),
+			);
 		}
 		Ok(settings)
 	}

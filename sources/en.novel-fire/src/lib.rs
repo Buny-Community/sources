@@ -3,13 +3,10 @@ use buny::{
 	Chapter, ContentBlock, ContentRating, FilterValue, Novel, NovelPageResult, NovelStatus, Result,
 	Source,
 	alloc::{String, Vec, string::ToString, vec},
+	imports::net::Request,
 	imports::std::parse_date,
-	imports::{net::Request, std::print},
 	prelude::*,
 };
-
-mod model;
-use model::{ChapterData, ChapterResponse};
 
 pub mod traits;
 
