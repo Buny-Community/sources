@@ -1,8 +1,7 @@
 #![no_std]
 use buny::{
-	BunyError, Chapter, ContentBlock, ContentRating, FilterValue, Novel, NovelPageResult,
-	NovelStatus, Result, Source,
-	alloc::{String, Vec, string::ToString, vec},
+	Chapter, ContentBlock, FilterValue, Novel, NovelPageResult, NovelStatus, Result, Source,
+	alloc::{String, Vec, string::ToString},
 	helpers::{string::StripPrefixOrSelf, uri::encode_uri_component},
 	imports::net::Request,
 	prelude::*,
@@ -191,7 +190,7 @@ impl Source for NovelsOnline {
 				}
 			}
 
-			let has_more = html
+			let _has_more = html
 				.select_first(".pagination li.page-item:last-child")
 				.is_some_and(|el| !el.has_class("disabled"));
 			println!("novel chapter count {}", chapters.len());

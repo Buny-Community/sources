@@ -2,7 +2,7 @@ use buny::{
 	Listing, ListingProvider, Novel, NovelPageResult, NovelStatus, Result,
 	alloc::{String, string::ToString},
 	helpers::string::StripPrefixOrSelf,
-	imports::{net::Request, std::print},
+	imports::net::Request,
 	prelude::*,
 };
 
