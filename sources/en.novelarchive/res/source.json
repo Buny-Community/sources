@@ -1,0 +1,30 @@
+{
+	"info": {
+		"id": "en.novelarchive",
+		"name": "Novel Archive",
+		"version": 1,
+		"url": "https://novelarchive.cc",
+		"contentRating": 1,
+		"languages": [
+			"en"
+		]
+	},
+	"listings": [
+		{
+			"id": "trending",
+			"name": "Trending"
+		},
+		{
+			"id": "editors-choice",
+			"name": "Editor's Choice"
+		},
+		{
+			"id": "recent",
+			"name": "Recently Added"
+		},
+		{
+			"id": "recently-updated",
+			"name": "Recently Updated"
+		}
+	]
+}
