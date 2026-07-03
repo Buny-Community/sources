@@ -1,7 +1,7 @@
 #![no_std]
 use buny::{
-	Chapter, ContentBlock, ContentRating, FilterValue, Listing, ListingProvider,
-	Novel, NovelPageResult, Result, Source,
+	Chapter, ContentBlock, ContentRating, FilterValue, Listing, ListingProvider, Novel,
+	NovelPageResult, Result, Source,
 	alloc::{String, Vec, borrow::Cow},
 };
 

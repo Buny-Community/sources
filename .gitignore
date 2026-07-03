@@ -12,6 +12,7 @@ public/*.json
 sources/*/target
 sources/*/public
 sources/*/cargo.lock
+sources/*/Cargo.lock
 templates/*/target
 
 .idea
