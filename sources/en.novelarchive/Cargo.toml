@@ -1,0 +1,25 @@
+[package]
+name = "novel-archive"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+buny = { git = "https://github.com/BunyApp/buny-rs.git", version = "0.1.0", features = ["json"] }
+serde = { version = "1.0.188", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = "1.0.105", default-features = false, features = ["alloc"] }
+
+[dev-dependencies]
+buny = { git = "https://github.com/BunyApp/buny-rs.git", features = ["test"] }
+buny-test = { git = "https://github.com/BunyApp/buny-rs.git" }
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+strip = true
+lto = true
