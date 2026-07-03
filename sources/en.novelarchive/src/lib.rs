@@ -262,4 +262,4 @@ impl Source for NovelArchive {
 	}
 }
 
-register_source!(NovelArchive, ListingProvider, Home, DeepLinkHandler);
+register_source!(NovelArchive, ListingProvider, Home);
