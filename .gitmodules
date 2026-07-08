@@ -1,3 +1,4 @@
 [submodule ".agents"]
 	path = .agents
 	url = https://github.com/Buny-Community/agents.git
+	branch = main
