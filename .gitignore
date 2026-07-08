@@ -2,6 +2,7 @@
 .build
 *.bunpack
 *.sh
+!install.sh
 
 /src/
 
