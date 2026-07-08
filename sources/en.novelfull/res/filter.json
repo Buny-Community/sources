@@ -1,0 +1,35 @@
+[
+  {
+    "type": "sort",
+    "id": "sort",
+    "title": "Sort by",
+    "options": ["Latest Release", "Hot Novel", "Completed Novel", "Most Popular"],
+    "ids": ["latest-release-novel", "hot-novel", "completed-novel", "most-popular"],
+    "default": {
+      "index": 3,
+      "ascending": true
+    }
+  },
+  {
+    "type": "select",
+    "id": "genre",
+    "title": "Genre",
+    "isGenre": true,
+    "options": [
+      "None", "Shounen", "Harem", "Comedy", "Martial Arts", "School Life", "Mystery",
+      "Shoujo", "Romance", "Sci-fi", "Gender Bender", "Mature", "Fantasy", "Horror",
+      "Drama", "Tragedy", "Supernatural", "Ecchi", "Xuanhuan", "Adventure", "Action",
+      "Psychological", "Xianxia", "Wuxia", "Historical", "Slice of Life", "Seinen",
+      "Lolicon", "Adult", "Josei", "Sports", "Smut", "Mecha", "Yaoi", "Shounen Ai",
+      "History", "Martial"
+    ],
+    "ids": [
+      "", "Shounen", "Harem", "Comedy", "Martial+Arts", "School+Life", "Mystery",
+      "Shoujo", "Romance", "Sci-fi", "Gender+Bender", "Mature", "Fantasy", "Horror",
+      "Drama", "Tragedy", "Supernatural", "Ecchi", "Xuanhuan", "Adventure", "Action",
+      "Psychological", "Xianxia", "Wuxia", "Historical", "Slice+of+Life", "Seinen",
+      "Lolicon", "Adult", "Josei", "Sports", "Smut", "Mecha", "Yaoi", "Shounen+Ai",
+      "History", "Martial"
+    ]
+  }
+]

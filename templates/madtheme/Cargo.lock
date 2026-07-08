@@ -170,6 +170,7 @@ version = "0.1.0"
 dependencies = [
  "buny",
  "buny-test",
+ "serde_json",
 ]
 
 [[package]]

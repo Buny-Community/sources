@@ -1,0 +1,28 @@
+{
+  "info": {
+    "id": "novelfull",
+    "name": "NovelFull",
+    "version": 1,
+    "url": "https://novelfull.com",
+    "contentRating": 1,
+    "languages": ["en"]
+  },
+  "listings": [
+    {
+      "id": "latest-release-novel",
+      "name": "Latest Release"
+    },
+    {
+      "id": "hot-novel",
+      "name": "Hot Novel"
+    },
+    {
+      "id": "completed-novel",
+      "name": "Completed Novel"
+    },
+    {
+      "id": "most-popular",
+      "name": "Most Popular"
+    }
+  ]
+}
