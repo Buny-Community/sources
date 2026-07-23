@@ -1,0 +1,10 @@
+[
+  {
+    "type": "select",
+    "key": "authorNotePosition",
+    "title": "Author Note",
+    "values": ["after", "before", "hidden"],
+    "titles": ["After chapter", "Before chapter", "Hidden"],
+    "default": "after"
+  }
+]

@@ -4,7 +4,7 @@ use buny::{
 	Source,
 	alloc::{String, Vec, string::ToString, vec},
 	helpers::{element::ElementHelpers, uri::QueryParameters},
-	imports::{net::Request, std::parse_date},
+	imports::{defaults::defaults_get, net::Request, std::parse_date},
 	prelude::*,
 };
 
@@ -325,7 +325,10 @@ impl Source for RoyalRoad {
 			})
 			.unwrap_or_default();
 
-		if html.select_first(".author-note").is_some() {
+		// author note placement: "after" (default) | "before" | "hidden"
+		let author_note_position =
+			defaults_get::<String>("authorNotePosition").unwrap_or_else(|| "after".into());
+		if author_note_position != "hidden" && html.select_first(".author-note").is_some() {
 			let author_note = html
 				.select(".author-note")
 				.unwrap()
@@ -336,9 +339,12 @@ impl Source for RoyalRoad {
 				.unwrap()
 				.text()
 				.unwrap();
-			content_list.push(ContentBlock::BlockQuote(
-				author_note_title + "\n" + &author_note,
-			));
+			let block = ContentBlock::BlockQuote(author_note_title + "\n" + &author_note);
+			if author_note_position == "before" {
+				content_list.insert(0, block);
+			} else {
+				content_list.push(block);
+			}
 		}
 
 		let review_link = format!("LINK: [click here for chapter reviews.]({})", url);
@@ -354,7 +360,5 @@ register_source!(
 	// after the name of the source struct, list all the extra traits it implements
 	ListingProvider,
 	Home,
-	DynamicListings,
-	NotificationHandler,
 	DeepLinkHandler
 );
