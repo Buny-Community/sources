@@ -2,8 +2,8 @@
 	"info": {
 		"id": "en.novelbuddy",
 		"name": "Novel Buddy",
-		"version": 3,
-		"url": "https://novelbuddy.com",
+		"version": 4,
+		"url": "https://novelbuddy.me",
 		"contentRating": 0,
 		"languages": [
 			"en"
@@ -12,19 +12,23 @@
 	"listings": [
 		{
 			"id": "latest",
-			"name": "Latest"
-		},
-		{
-			"id": "trending",
-			"name": "Trending"
+			"name": "Latest Updates"
 		},
 		{
 			"id": "popular",
 			"name": "Popular"
 		},
 		{
+			"id": "trending",
+			"name": "Trending"
+		},
+		{
 			"id": "newest",
 			"name": "Newest"
+		},
+		{
+			"id": "completed",
+			"name": "Completed"
 		},
 		{
 			"id": "top/month",
