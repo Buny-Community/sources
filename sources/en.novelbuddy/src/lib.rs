@@ -20,7 +20,8 @@ const API_URL: &str = "https://api.novelbuddy.me";
 const DATE_FORMAT: &str = "yyyy-MM-dd HH:mm:ss";
 
 // Sort values accepted by the /titles/search API, in the order of the sort filter options.
-const SORT_VALUES: [&str; 12] = [
+// The API also advertises "added_date", but it returns a 500, so no option maps to it.
+const SORT_VALUES: [&str; 11] = [
 	"",
 	"latest",
 	"popular",
@@ -29,7 +30,6 @@ const SORT_VALUES: [&str; 12] = [
 	"bookmarks",
 	"chapters",
 	"newest",
-	"added_date",
 	"views_today",
 	"views_7days",
 	"views_30days",
@@ -90,12 +90,16 @@ impl NovelBuddy {
 
 	// Fetches the Next.js page props JSON for a site path, retrying once with a
 	// fresh build id when the cached one has gone stale.
+	//
+	// A stale build id 404s with an empty `{}` body, so a missing "pageProps" is the
+	// staleness signal. A path that does not exist still returns "pageProps", carrying
+	// an "httpError" instead, and must not trigger a retry.
 	fn next_data(&self, path: &str, page: i32, slug: Option<&str>) -> Result<Value> {
 		let url = self.next_data_url(path, page, slug)?;
 		if let Ok(json) = Self::get_json(&url)
 			&& json.get("pageProps").is_some()
 		{
-			return Ok(json);
+			return check_page_error(json);
 		}
 
 		*self.build_id.borrow_mut() = None;
@@ -104,11 +108,19 @@ impl NovelBuddy {
 		if json.get("pageProps").is_none() {
 			bail!("Invalid page data");
 		}
-		Ok(json)
+		check_page_error(json)
 	}
 
 	fn search(qs: &QueryParameters) -> Result<NovelPageResult> {
 		let json = Self::get_json(&format!("{API_URL}/titles/search?{qs}"))?;
+		// A rejected query still parses as JSON, so an unchecked read would silently
+		// yield an empty result list instead of an error.
+		if !json["success"].as_bool().unwrap_or(false) {
+			bail!(
+				"{}",
+				json["message"].as_str().unwrap_or("Search request failed")
+			);
+		}
 		let data = &json["data"];
 		Ok(NovelPageResult {
 			entries: parse_novel_items(data["items"].as_array()),
@@ -156,8 +168,10 @@ impl Source for NovelBuddy {
 				// The API rejects repeated genre params, so each must be a single
 				// comma-joined value.
 				FilterValue::MultiSelect {
-					included, excluded, ..
-				} => {
+					id,
+					included,
+					excluded,
+				} if id == "genres" => {
 					if !included.is_empty() {
 						qs.push("genres", Some(&included.join(",")));
 					}
@@ -203,10 +217,15 @@ impl Source for NovelBuddy {
 					.collect()
 			});
 
-			// The payload lists most genres twice in different casing.
+			// Genres are the broad categories shown in the filter; "tags" are the finer
+			// descriptors (Magic, System, Weak to Strong). Both are useful, and the
+			// payload lists some of them twice in different casing.
 			let mut tags: Vec<String> = Vec::new();
-			for genre in manga["genres"].as_array().into_iter().flatten() {
-				let name = genre["name"].as_str().unwrap_or("").trim();
+			for entry in ["genres", "tags"]
+				.iter()
+				.flat_map(|key| manga[*key].as_array().into_iter().flatten())
+			{
+				let name = entry["name"].as_str().unwrap_or("").trim();
 				if !name.is_empty() && !tags.iter().any(|t| t.eq_ignore_ascii_case(name)) {
 					tags.push(name.to_string());
 				}
@@ -224,13 +243,12 @@ impl Source for NovelBuddy {
 				"canceled" | "cancelled" | "dropped" => NovelStatus::Cancelled,
 				_ => NovelStatus::Unknown,
 			};
+			let has_tag = |name: &str| tags.iter().any(|t| t.eq_ignore_ascii_case(name));
 			novel.content_rating = if manga["isAdult"].as_bool().unwrap_or(false)
-				|| tags
-					.iter()
-					.any(|t| matches!(t.as_str(), "Adult" | "Mature" | "Smut"))
+				|| ["Adult", "Mature", "Smut"].iter().any(|t| has_tag(t))
 			{
 				ContentRating::NSFW
-			} else if tags.iter().any(|t| t == "Ecchi") {
+			} else if has_tag("Ecchi") {
 				ContentRating::Suggestive
 			} else {
 				ContentRating::Safe
@@ -337,9 +355,20 @@ impl ListingProvider for NovelBuddy {
 			.iter()
 			.find_map(|key| page_props[*key].as_array())
 			.or_else(|| page_props["initialData"]["items"].as_array());
-		let mut entries = parse_novel_items(items);
-		entries.dedup_by(|a, b| a.key == b.key);
 
+		// A listing can surface the same novel more than once (a title updated twice
+		// within the window), and the repeats are not necessarily adjacent.
+		let mut seen: Vec<String> = Vec::new();
+		let mut entries = parse_novel_items(items);
+		entries.retain(|novel| {
+			if seen.contains(&novel.key) {
+				return false;
+			}
+			seen.push(novel.key.clone());
+			true
+		});
+
+		// /trending serves a fixed set with no pagination block, so it stays on one page.
 		let has_next_page = ["pagination", "initialPagination"]
 			.iter()
 			.any(|key| page_props[*key]["has_next"].as_bool().unwrap_or(false));
@@ -349,6 +378,17 @@ impl ListingProvider for NovelBuddy {
 			has_next_page,
 		})
 	}
+}
+
+// A path the site does not serve still answers with page props, carrying an
+// "httpError" object instead of the page's data. Surface its message rather than
+// letting the caller report a generic missing-payload error.
+fn check_page_error(json: Value) -> Result<Value> {
+	let error = &json["pageProps"]["httpError"];
+	if error.is_object() {
+		bail!("{}", error["message"].as_str().unwrap_or("Page not found"));
+	}
+	Ok(json)
 }
 
 // Listing and search entries share the same shape; some listings wrap the
@@ -378,6 +418,10 @@ fn parse_novel_items(items: Option<&Vec<Value>>) -> Vec<Novel> {
 
 // Splits an HTML fragment into plain-text paragraphs. Paragraphs arrive either as
 // <p> blocks or separated by runs of <br/>, and a chapter can mix both.
+//
+// Chapter content is also peppered with empty <div></div> elements. They are not
+// scene breaks — chapters mark those with a literal "***" paragraph, and the empty
+// divs appear mid-dialogue — so they collapse to blank lines and get dropped.
 fn html_paragraphs(html: &str) -> Vec<String> {
 	let mut text = String::with_capacity(html.len());
 	let mut rest = html;
@@ -387,7 +431,11 @@ fn html_paragraphs(html: &str) -> Vec<String> {
 			break;
 		};
 		let tag = rest[start + 1..start + end].trim().to_lowercase();
-		if tag.starts_with("br") || tag.starts_with("/p") || tag.starts_with("/div") {
+		if tag.starts_with("br")
+			|| tag.starts_with("/br")
+			|| tag.starts_with("/p")
+			|| tag.starts_with("/div")
+		{
 			text.push('\n');
 		}
 		rest = &rest[start + end + 1..];
