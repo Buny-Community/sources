@@ -359,3 +359,50 @@ register_source!(
 	Home,
 	DeepLinkHandler
 );
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use buny::{Home, HomeComponentValue, Listing, ListingProvider};
+	use buny_test::buny_test;
+
+	#[buny_test]
+	fn test_listings() {
+		let source = RoyalRoad::new();
+		for id in [
+			"best-rated",
+			"trending",
+			"rising-stars",
+			"new-releases",
+			"latest-updates",
+		] {
+			let listing = Listing {
+				id: id.into(),
+				..Default::default()
+			};
+			let result = source.get_novel_list(listing, 1).unwrap();
+			println!("{id}: {} entries", result.entries.len());
+			assert!(!result.entries.is_empty(), "{id}");
+		}
+	}
+
+	#[buny_test]
+	fn test_home() {
+		let home = RoyalRoad::new().get_home().unwrap();
+		for c in &home.components {
+			let count = match &c.value {
+				HomeComponentValue::Details { entries, .. }
+				| HomeComponentValue::Scroller { entries, .. }
+				| HomeComponentValue::Stack { entries, .. }
+				| HomeComponentValue::Vertical { entries, .. } => entries.len(),
+				_ => 0,
+			};
+			println!("{:?}: {count}", c.title);
+			// The Vertical grid is sent empty; the app pages it itself.
+			if !matches!(c.value, HomeComponentValue::Vertical { .. }) {
+				assert!(count > 0, "{:?}", c.title);
+			}
+		}
+		assert_eq!(home.components.len(), 5);
+	}
+}

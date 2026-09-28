@@ -5,24 +5,27 @@ use buny::{
 	imports::std::send_partial_result,
 };
 
-use crate::NovelFire;
+use crate::NovelBuddy;
 
 #[derive(Clone, Copy)]
 enum Kind {
 	Details,
+	Scroller,
 	Stack,
-	// Rendered by the app at the bottom of the page whatever its position, as a
-	// grid that loads the listing itself, so it is sent empty.
+	// Rendered by the app at the bottom of the page whatever its position, as an
+	// endless grid that pages through the listing itself, so it is sent empty.
 	Vertical,
 }
 
-// (listing id, title, component kind). Ids are the rankings handled by
-// `get_novel_list`. "most-review" is left out: its top entries largely repeat
-// "overall-ranking" and "most-lib".
-const SECTIONS: [(&str, &str, Kind); 3] = [
-	("overall-ranking", "Overall Ranking", Kind::Details),
-	("ratings", "Top Rated", Kind::Stack),
-	("most-lib", "Most in Library", Kind::Vertical),
+// (listing id, title, component kind). Ids are the listings handled by
+// `get_novel_list`. "newest" is left out: its top entries largely repeat
+// "latest", and both are mostly fresh MTL imports.
+const SECTIONS: [(&str, &str, Kind); 5] = [
+	("trending", "Trending", Kind::Details),
+	("top/month", "Top This Month", Kind::Stack),
+	("popular", "Popular", Kind::Scroller),
+	("completed", "Completed", Kind::Stack),
+	("latest", "Latest Updates", Kind::Vertical),
 ];
 
 fn component(
@@ -36,6 +39,14 @@ fn component(
 			entries,
 			auto_scroll_interval: Some(10.0),
 			listing,
+		},
+		// Size stays 0: BunyRunner decodes this field as an Option, so any other
+		// value misdecodes (Reader open bug #18).
+		Kind::Scroller => HomeComponentValue::Scroller {
+			entries,
+			auto_scroll_interval: None,
+			listing,
+			size: 0,
 		},
 		Kind::Stack => HomeComponentValue::Stack {
 			entries,
@@ -51,7 +62,7 @@ fn component(
 	}
 }
 
-impl Home for NovelFire {
+impl Home for NovelBuddy {
 	fn get_home(&self) -> Result<HomeLayout> {
 		send_partial_result(&HomePartialResult::Layout(HomeLayout {
 			components: SECTIONS

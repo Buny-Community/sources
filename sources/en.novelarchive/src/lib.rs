@@ -263,3 +263,30 @@ impl Source for NovelArchive {
 }
 
 register_source!(NovelArchive, ListingProvider, Home);
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use buny::{Home, HomeComponentValue};
+	use buny_test::buny_test;
+
+	#[buny_test]
+	fn test_home() {
+		let home = NovelArchive::new().get_home().unwrap();
+		for c in &home.components {
+			let count = match &c.value {
+				HomeComponentValue::Details { entries, .. }
+				| HomeComponentValue::Scroller { entries, .. }
+				| HomeComponentValue::Stack { entries, .. }
+				| HomeComponentValue::Vertical { entries, .. } => entries.len(),
+				_ => 0,
+			};
+			println!("{:?}: {count}", c.title);
+			// The Vertical grid is sent empty; the app loads it itself.
+			if !matches!(c.value, HomeComponentValue::Vertical { .. }) {
+				assert!(count > 0, "{:?}", c.title);
+			}
+		}
+		assert_eq!(home.components.len(), 4);
+	}
+}
