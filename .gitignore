@@ -19,3 +19,4 @@ templates/*/target
 *.iml
 .zed
 .ropeproject
+sources/public/*
