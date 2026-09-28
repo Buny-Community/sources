@@ -35,7 +35,7 @@ impl Source for NovelFire {
 		// https://novelfire.net/search?keyword=shadow&page=4
 		let url = format!(
 			"{}/search?keyword={}&page={}",
-			&BASE_URL,
+			BASE_URL,
 			query.unwrap_or_default(),
 			page
 		);
@@ -53,7 +53,7 @@ impl Source for NovelFire {
 
 					let cover = format!(
 						"{}/{}",
-						&BASE_URL,
+						BASE_URL,
 						novel_node.select_first("img")?.attr("src")?
 					);
 
@@ -87,7 +87,7 @@ impl Source for NovelFire {
 		page: i32,
 	) -> Result<Novel> {
 		if needs_details {
-			let url = format!("{}/book/{}", &BASE_URL, novel.key);
+			let url = format!("{}/book/{}", BASE_URL, novel.key);
 			let html = Request::get(&url)?.html()?;
 
 			let main_div = html.select_first(".cover img").unwrap();
@@ -128,7 +128,7 @@ impl Source for NovelFire {
 			novel.url = Some(url);
 		}
 		if needs_chapters {
-			let url = format!("{}/book/{}/chapters?page={}", &BASE_URL, &novel.key, &page);
+			let url = format!("{}/book/{}/chapters?page={}", BASE_URL, novel.key, page);
 			println!("Fetching chapters from URL: {}", &url);
 			let html = Request::get(url)?.html()?;
 
@@ -192,7 +192,7 @@ impl Source for NovelFire {
 		novel: Novel,
 		chapter: Chapter,
 	) -> Result<Vec<ContentBlock>> {
-		let url = format!("{}/book/{}/{}", &BASE_URL, novel.key, chapter.key);
+		let url = format!("{}/book/{}/{}", BASE_URL, novel.key, chapter.key);
 		let html = Request::get(&url)?.html()?;
 
 		let mut content_list: Vec<ContentBlock> = html

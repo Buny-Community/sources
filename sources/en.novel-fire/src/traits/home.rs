@@ -106,7 +106,6 @@ impl Home for NovelFire {
 					subtitle: Some("Recently updated novels!".to_string()),
 					value: buny::HomeComponentValue::Vertical {
 						entries: Vec::new(),
-						auto_scroll_interval: Some(10.0),
 						listing: Some(Listing {
 							id: "most-review".into(),
 							name: "".into(),
