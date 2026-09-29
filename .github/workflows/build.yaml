@@ -57,6 +57,9 @@ jobs:
       - name: Build sources
         run: |
           for src in ./sources/*; do
+            # The cache restores sources/**/target/ even for removed sources,
+            # leaving directories with no Cargo.toml behind.
+            [ -f "$src/Cargo.toml" ] || continue
             (
               cd "$src"
               buny package
