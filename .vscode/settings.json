@@ -1,11 +1,10 @@
 {
   "rust-analyzer.linkedProjects": [
+    "sources/en.chikari/Cargo.toml",
     "sources/en.novel-fire/Cargo.toml",
     "sources/en.novelarchive/Cargo.toml",
     "sources/en.novelbuddy/Cargo.toml",
     "sources/en.novelfull/Cargo.toml",
-    "sources/en.novelsonline/Cargo.toml",
-    "sources/en.royalroad/Cargo.toml",
-    "templates/madtheme/Cargo.toml"
+    "sources/en.royalroad/Cargo.toml"
   ]
 }

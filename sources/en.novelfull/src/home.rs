@@ -5,24 +5,24 @@ use buny::{
 	imports::std::send_partial_result,
 };
 
-use crate::NovelFire;
+use crate::NovelFull;
 
 #[derive(Clone, Copy)]
 enum Kind {
 	Details,
 	Stack,
-	// Rendered by the app at the bottom of the page whatever its position, as a
-	// grid that loads the listing itself, so it is sent empty.
+	// Rendered by the app at the bottom of the page whatever its position, as an
+	// endless grid that pages through the listing itself, so it is sent empty.
 	Vertical,
 }
 
-// (listing id, title, component kind). Ids are the rankings handled by
-// `get_novel_list`. "most-review" is left out: its top entries largely repeat
-// "overall-ranking" and "most-lib".
+// (listing id, title, component kind). Ids are the listings handled by
+// `get_novel_list`. "completed-novel" is left out: its top entries largely
+// repeat "most-popular".
 const SECTIONS: [(&str, &str, Kind); 3] = [
-	("overall-ranking", "Overall Ranking", Kind::Details),
-	("ratings", "Top Rated", Kind::Stack),
-	("most-lib", "Most in Library", Kind::Vertical),
+	("hot-novel", "Hot Novels", Kind::Details),
+	("most-popular", "Most Popular", Kind::Stack),
+	("latest-release-novel", "Latest Release", Kind::Vertical),
 ];
 
 fn component(
@@ -51,7 +51,7 @@ fn component(
 	}
 }
 
-impl Home for NovelFire {
+impl Home for NovelFull {
 	fn get_home(&self) -> Result<HomeLayout> {
 		send_partial_result(&HomePartialResult::Layout(HomeLayout {
 			components: SECTIONS

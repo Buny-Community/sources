@@ -1,12 +1,14 @@
 #![no_std]
 use buny::{
-	alloc::{string::ToString, vec, String, Vec},
-	helpers::{element::ElementHelpers, uri::encode_uri_component},
-	imports::{html::Document, net::Request},
-	prelude::*,
 	Chapter, ContentBlock, ContentRating, FilterValue, Listing, ListingProvider, Novel,
 	NovelPageResult, NovelStatus, Result, Source,
+	alloc::{String, Vec, string::ToString},
+	helpers::uri::encode_uri_component,
+	imports::{html::Document, net::Request},
+	prelude::*,
 };
+
+mod home;
 
 struct NovelFull;
 
@@ -139,51 +141,56 @@ impl Source for NovelFull {
 				}
 			}
 
+			// Join the paragraphs directly rather than via text_with_newlines(), which
+			// returns None under buny-test-runner (its fragment parser has no <body>).
 			novel.description = html
-				.select_first("div.desc-text")
-				.and_then(|el| el.text_with_newlines());
+				.select("div.desc-text p")
+				.map(|els| {
+					els.filter_map(|p| p.text())
+						.filter(|t| !t.is_empty())
+						.collect::<Vec<_>>()
+						.join("\n\n")
+				})
+				.filter(|d| !d.is_empty())
+				.or_else(|| html.select_first("div.desc-text").and_then(|el| el.text()));
 
-			if let Some(status_el) = html
-				.select_first("h3:contains(Status)")
-				.and_then(|el| el.next())
-			{
-				novel.status = status_el
-					.text()
-					.map(|t| status_from_text(&t))
-					.unwrap_or(NovelStatus::Unknown);
-			}
-
-			if let Some(author_h3) = html.select_first("h3:contains(Author)") {
-				let author_text = author_h3
-					.parent()
-					.and_then(|p| p.text())
+			// Each `.info > div` row is `<h3>Label:</h3>` followed by links. Match on the
+			// label text: buny-test-runner's selector engine has no `:contains()`.
+			for row in html.select(".info > div").into_iter().flatten() {
+				let Some(label) = row.select_first("h3").and_then(|h| h.text()) else {
+					continue;
+				};
+				let links: Vec<String> = row
+					.select("a")
+					.map(|els| {
+						els.filter_map(|a| a.text())
+							.map(|t| t.trim().to_string())
+							.filter(|t| !t.is_empty())
+							.collect()
+					})
 					.unwrap_or_default();
-				let author = author_text.replace("Author:", "").trim().to_string();
-				if !author.is_empty() {
-					novel.authors = Some(vec![author]);
-				}
-			}
-
-			if let Some(genre_h3) = html.select_first("h3:contains(Genre)") {
-				let tags: Vec<String> = genre_h3
-					.siblings()
-					.filter_map(|el| el.text())
-					.map(|t: String| t.trim().to_string())
-					.filter(|t: &String| !t.is_empty())
-					.collect();
-				if !tags.is_empty() {
-					novel.content_rating = if tags.iter().any(|t: &String| {
-						let l = t.to_lowercase();
-						l.contains("adult")
-							|| l.contains("smut") || l.contains("mature")
-							|| l.contains("lolicon")
-							|| l.contains("yaoi")
-					}) {
-						ContentRating::NSFW
-					} else {
-						ContentRating::Safe
-					};
-					novel.tags = Some(tags);
+				match label.trim_end_matches(':').trim() {
+					"Author" if !links.is_empty() => novel.authors = Some(links),
+					"Status" => {
+						novel.status = links
+							.first()
+							.map(|t| status_from_text(t))
+							.unwrap_or(NovelStatus::Unknown);
+					}
+					"Genre" if !links.is_empty() => {
+						novel.content_rating = if links.iter().any(|t| {
+							let l = t.to_lowercase();
+							l.contains("adult")
+								|| l.contains("smut") || l.contains("mature")
+								|| l.contains("lolicon") || l.contains("yaoi")
+						}) {
+							ContentRating::NSFW
+						} else {
+							ContentRating::Safe
+						};
+						novel.tags = Some(links);
+					}
+					_ => {}
 				}
 			}
 
@@ -196,7 +203,7 @@ impl Source for NovelFull {
 				.and_then(|el| el.attr("data-novel-id"));
 
 			if let Some(novel_id) = novel_id {
-				let chapter_list_url = format!("{BASE_URL}/ajax/chapter-option?novelId={novel_id}");
+				let chapter_list_url = format!("{BASE_URL}/ajax-chapter-option?novelId={novel_id}");
 				let chapter_html = Request::get(&chapter_list_url)?.html()?;
 
 				let mut chapter_number: f32 = 0.0;
@@ -239,14 +246,16 @@ impl Source for NovelFull {
 			.select("#chapter-content > p")
 			.map(|els| {
 				els.filter_map(|p| {
-					let text = p.text_with_newlines()?;
+					let text = p.text()?;
 					let text = text.trim();
 					if text.is_empty() {
 						None
 					} else if text == "-" {
 						Some(ContentBlock::divider())
 					} else if text.starts_with('[') && text.ends_with(']') {
-						Some(ContentBlock::block_quote(text[1..text.len()-1].to_string()))
+						Some(ContentBlock::block_quote(
+							text[1..text.len() - 1].to_string(),
+						))
 					} else {
 						Some(ContentBlock::paragraph(text.to_string(), None))
 					}
@@ -273,13 +282,14 @@ impl ListingProvider for NovelFull {
 	}
 }
 
-register_source!(NovelFull, ListingProvider);
+register_source!(NovelFull, ListingProvider, Home);
 
 // Temporary live-verification tests — run once via `cargo test`, then removed.
 // Only lengths/counts are asserted or printed, never actual scraped prose.
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use buny::alloc::vec;
 	use buny_test::buny_test;
 
 	#[buny_test]
@@ -298,6 +308,27 @@ mod tests {
 		assert!(!first.title.is_empty());
 		assert!(!first.key.is_empty());
 		assert!(first.cover.is_some());
+	}
+
+	#[buny_test]
+	fn test_home() {
+		use buny::{Home, HomeComponentValue};
+		let home = NovelFull::new().get_home().unwrap();
+		for c in &home.components {
+			let count = match &c.value {
+				HomeComponentValue::Details { entries, .. }
+				| HomeComponentValue::Scroller { entries, .. }
+				| HomeComponentValue::Stack { entries, .. }
+				| HomeComponentValue::Vertical { entries, .. } => entries.len(),
+				_ => 0,
+			};
+			println!("{:?}: {count}", c.title);
+			// The Vertical grid is sent empty; the app pages it itself.
+			if !matches!(c.value, HomeComponentValue::Vertical { .. }) {
+				assert!(count > 0, "{:?}", c.title);
+			}
+		}
+		assert_eq!(home.components.len(), 3);
 	}
 
 	#[buny_test]

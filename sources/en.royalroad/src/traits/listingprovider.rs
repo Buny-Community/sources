@@ -1,7 +1,6 @@
 use buny::{
 	Listing, ListingProvider, Novel, NovelPageResult, NovelStatus, Result,
 	alloc::{String, Vec, string::ToString},
-	helpers::element::ElementHelpers,
 	imports::net::Request,
 	prelude::*,
 };
@@ -78,15 +77,22 @@ impl ListingProvider for RoyalRoad {
 						})
 						.unwrap_or(NovelStatus::Unknown);
 
+					// Join the paragraphs directly: text_with_newlines() returns None
+					// under buny-test-runner (its fragment parser has no <body>), and
+					// unwrapping it panicked every listing in tests.
 					let description = novel_node
-						.select(format!("#description-{}", key.split('/').next().unwrap()))
-						.map(|els| {
-							els.filter_map(|el| {
-								let desc = el.text_with_newlines().unwrap();
-								Some(desc)
-							})
-							.collect::<Vec<String>>()
-							.join("\n\n")
+						.select_first(format!("#description-{}", key.split('/').next()?))
+						.and_then(|el| {
+							let paragraphs = el
+								.select("p")
+								.map(|els| {
+									els.filter_map(|p| p.text())
+										.filter(|t| !t.is_empty())
+										.collect::<Vec<String>>()
+										.join("\n\n")
+								})
+								.filter(|d| !d.is_empty());
+							paragraphs.or_else(|| el.text())
 						});
 
 					let url = String::from(BASE_URL)

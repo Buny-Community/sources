@@ -1,150 +1,114 @@
 use buny::{
-	Home, HomeComponent, HomeLayout, HomePartialResult, Listing, ListingProvider, Result,
-	alloc::{string::ToString, vec},
+	Home, HomeComponent, HomeComponentValue, HomeLayout, HomePartialResult, Listing,
+	ListingProvider, Novel, Result,
+	alloc::{String, Vec, string::ToString},
 	imports::std::send_partial_result,
 };
 
 use crate::RoyalRoad;
 
-// Send initial layout structure
-pub fn send_initial_layout() {
-	send_partial_result(&HomePartialResult::Layout(HomeLayout {
-		components: vec![
-			HomeComponent {
-				title: Some("Best Rated Novels".to_string()),
-				subtitle: None,
-				value: buny::HomeComponentValue::empty_details(),
-			},
-			HomeComponent {
-				title: Some("Trending Novels".to_string()),
-				subtitle: None,
-				value: buny::HomeComponentValue::empty_details(),
-			},
-			HomeComponent {
-				title: Some("Rising Stars".to_string()),
-				subtitle: None,
-				value: buny::HomeComponentValue::empty_stack(),
-			},
-			HomeComponent {
-				title: Some("Newest Novels".to_string()),
-				subtitle: Some("Novels based on most reviews!".to_string()),
-				value: buny::HomeComponentValue::empty_scroller(),
-			},
-			HomeComponent {
-				title: Some("Latest Updates".to_string()),
-				value: buny::HomeComponentValue::empty_scroller(),
-				..Default::default()
-			},
-		],
-	}));
+#[derive(Clone, Copy)]
+enum Kind {
+	Details,
+	Scroller,
+	Stack,
+	// Rendered by the app at the bottom of the page whatever its position, as an
+	// endless grid that pages through the listing itself, so it is sent empty.
+	Vertical,
 }
 
-// use the home trait to implement a home page for a source
-// where possible, try to replicate the associated web page's layout
+// (listing id, title, subtitle, component kind). Ids are the listings handled by
+// `get_novel_list`.
+const SECTIONS: [(&str, &str, Option<&str>, Kind); 5] = [
+	(
+		"trending",
+		"Trending",
+		Some("Popular stories right now"),
+		Kind::Details,
+	),
+	(
+		"rising-stars",
+		"Rising Stars",
+		Some("Newer stories gaining readers fast"),
+		Kind::Stack,
+	),
+	(
+		"best-rated",
+		"Best Rated",
+		Some("The highest rated stories of all time"),
+		Kind::Stack,
+	),
+	("new-releases", "New Releases", None, Kind::Scroller),
+	("latest-updates", "Latest Updates", None, Kind::Vertical),
+];
+
+fn component(
+	kind: Kind,
+	title: &str,
+	subtitle: Option<&str>,
+	entries: Vec<Novel>,
+	listing: Option<Listing>,
+) -> HomeComponent {
+	let value = match kind {
+		Kind::Details => HomeComponentValue::Details {
+			entries,
+			auto_scroll_interval: Some(10.0),
+			listing,
+		},
+		// Size stays 0: BunyRunner decodes this field as an Option, so any other
+		// value misdecodes (Reader open bug #18).
+		Kind::Scroller => HomeComponentValue::Scroller {
+			entries,
+			auto_scroll_interval: None,
+			listing,
+			size: 0,
+		},
+		Kind::Stack => HomeComponentValue::Stack {
+			entries,
+			auto_scroll_interval: None,
+			listing,
+		},
+		Kind::Vertical => HomeComponentValue::Vertical { entries, listing },
+	};
+	HomeComponent {
+		title: Some(title.to_string()),
+		subtitle: subtitle.map(str::to_string),
+		value,
+	}
+}
+
 impl Home for RoyalRoad {
 	fn get_home(&self) -> Result<HomeLayout> {
-		send_initial_layout();
+		send_partial_result(&HomePartialResult::Layout(HomeLayout {
+			components: SECTIONS
+				.iter()
+				.map(|(_, title, subtitle, kind)| {
+					component(*kind, title, *subtitle, Vec::new(), None)
+				})
+				.collect(),
+		}));
 
-		let listing = Listing {
-			id: "best-rated".into(),
-			name: "".into(),
-			..Default::default()
-		};
-		let listing2 = Listing {
-			id: "trending".into(),
-			name: "".into(),
-			..Default::default()
-		};
+		// One failed section should not blank the whole page.
+		let components = SECTIONS
+			.iter()
+			.map(|(id, title, subtitle, kind)| {
+				let listing = Listing {
+					id: String::from(*id),
+					name: String::from(*title),
+					..Default::default()
+				};
+				let entries = match kind {
+					Kind::Vertical => Vec::new(),
+					_ => {
+						self.get_novel_list(listing.clone(), 1)
+							.unwrap_or_default()
+							.entries
+					}
+				};
+				component(*kind, title, *subtitle, entries, Some(listing))
+			})
+			.collect();
 
-		let listing3 = Listing {
-			id: "rising-stars".into(),
-			name: "".into(),
-			..Default::default()
-		};
-
-		let listing4 = Listing {
-			id: "new-releases".into(),
-			name: "".into(),
-			..Default::default()
-		};
-
-		let listing5 = Listing {
-			id: "latest-updates".into(),
-			name: "".into(),
-			..Default::default()
-		};
-
-		Ok(HomeLayout {
-			components: vec![
-				HomeComponent {
-					title: Some("Best Rated Novels".to_string()),
-					subtitle: Some("The most popular stories.".to_string()),
-					value: buny::HomeComponentValue::Details {
-						entries: self
-							.get_novel_list(listing.clone(), 1)
-							.unwrap_or_default()
-							.entries,
-						auto_scroll_interval: Some(10.0),
-						listing: Some(listing),
-					},
-				},
-				HomeComponent {
-					title: Some("Trending Novels".to_string()),
-					subtitle: Some(
-						"Stories that you might fancy, but may be buried under the other gems."
-							.to_string(),
-					),
-					value: buny::HomeComponentValue::Details {
-						entries: self
-							.get_novel_list(listing2.clone(), 1)
-							.unwrap_or_default()
-							.entries,
-						auto_scroll_interval: Some(10.0),
-						listing: Some(listing2),
-					},
-				},
-				HomeComponent {
-					title: Some("Rising Stars".to_string()),
-					subtitle: Some(
-						"Stories that you might fancy, but may be buried under the other gems."
-							.to_string(),
-					),
-					value: buny::HomeComponentValue::Stack {
-						entries: self
-							.get_novel_list(listing3.clone(), 1)
-							.unwrap_or_default()
-							.entries,
-						auto_scroll_interval: Some(10.0),
-						listing: Some(listing3),
-					},
-				},
-				HomeComponent {
-					title: Some("Newest Novels".to_string()),
-					subtitle: Some("Newest Stories".to_string()),
-					value: buny::HomeComponentValue::Scroller {
-						entries: self
-							.get_novel_list(listing4.clone(), 1)
-							.unwrap_or_default()
-							.entries,
-						auto_scroll_interval: Some(10.0),
-						listing: Some(listing4),
-						size: 400,
-					},
-				},
-				HomeComponent {
-					title: Some("Latest Updates".to_string()),
-					subtitle: Some("The most recently updated stories.".to_string()),
-					value: buny::HomeComponentValue::Scroller {
-						entries: self
-							.get_novel_list(listing5.clone(), 1)
-							.unwrap_or_default()
-							.entries,
-						auto_scroll_interval: Some(10.0),
-						listing: Some(listing5),
-						size: 400,
-					},
-				},
-			],
-		})
+		Ok(HomeLayout { components })
 	}
 }

@@ -17,6 +17,8 @@ use serde_json::Value;
 const BASE_URL: &str = "https://novelbuddy.me";
 const API_URL: &str = "https://api.novelbuddy.me";
 
+mod home;
+
 const DATE_FORMAT: &str = "yyyy-MM-dd HH:mm:ss";
 
 // Sort values accepted by the /titles/search API, in the order of the sort filter options.
@@ -334,10 +336,13 @@ impl ListingProvider for NovelBuddy {
 	fn get_novel_list(&self, listing: Listing, page: i32) -> Result<NovelPageResult> {
 		let page = page.max(1);
 
-		// Completed novels have no site page of their own; use the search API.
+		// Completed novels have no site page of their own; use the search API. Its
+		// default order is by latest update, which surfaces mostly fresh MTL imports,
+		// so sort by popularity instead.
 		if listing.id == "completed" {
 			let mut qs = QueryParameters::new();
 			qs.push("status", Some("completed"));
+			qs.push("sort", Some("popular"));
 			qs.push("page", Some(&page.to_string()));
 			qs.push("limit", Some("24"));
 			return Self::search(&qs);
@@ -461,7 +466,7 @@ fn parse_timestamp(value: &str) -> Option<i64> {
 	parse_date(value, DATE_FORMAT)
 }
 
-register_source!(NovelBuddy, ListingProvider);
+register_source!(NovelBuddy, ListingProvider, Home);
 
 #[cfg(test)]
 mod test {
@@ -492,6 +497,27 @@ mod test {
 			.unwrap();
 		println!("{:?}", &content[..2]);
 		assert!(content.len() > 10);
+	}
+
+	#[buny_test]
+	fn test_home() {
+		use buny::{Home, HomeComponentValue};
+		let home = NovelBuddy::new().get_home().unwrap();
+		for c in &home.components {
+			let count = match &c.value {
+				HomeComponentValue::Details { entries, .. }
+				| HomeComponentValue::Scroller { entries, .. }
+				| HomeComponentValue::Stack { entries, .. }
+				| HomeComponentValue::Vertical { entries, .. } => entries.len(),
+				_ => 0,
+			};
+			println!("{:?}: {count}", c.title);
+			// The Vertical grid is sent empty; the app pages it itself.
+			if !matches!(c.value, HomeComponentValue::Vertical { .. }) {
+				assert!(count > 0, "{:?}", c.title);
+			}
+		}
+		assert_eq!(home.components.len(), 5);
 	}
 
 	#[buny_test]

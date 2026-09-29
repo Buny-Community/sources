@@ -20,7 +20,6 @@ impl Source for NovelFire {
 	// this method is called once when the source is initialized
 	// perform any necessary setup here
 	fn new() -> Self {
-		println!("hello is this source working");
 		Self
 	}
 
@@ -129,7 +128,6 @@ impl Source for NovelFire {
 		}
 		if needs_chapters {
 			let url = format!("{}/book/{}/chapters?page={}", BASE_URL, novel.key, page);
-			println!("Fetching chapters from URL: {}", &url);
 			let html = Request::get(url)?.html()?;
 
 			let chapters: Vec<Chapter> = html
@@ -180,7 +178,6 @@ impl Source for NovelFire {
 			let has_more = html
 				.select_first(".pagination li.page-item:last-child")
 				.is_some_and(|el| !el.has_class("disabled"));
-			println!("novel chapter count {}", chapters.len());
 			novel.chapters = Some(chapters);
 			novel.has_more_chapters = Some(has_more);
 		}
@@ -237,3 +234,30 @@ register_source!(
 	AlternateCoverProvider,
 	DeepLinkHandler
 );
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use buny::{Home, HomeComponentValue};
+	use buny_test::buny_test;
+
+	#[buny_test]
+	fn test_home() {
+		let home = NovelFire::new().get_home().unwrap();
+		for c in &home.components {
+			let count = match &c.value {
+				HomeComponentValue::Details { entries, .. }
+				| HomeComponentValue::Scroller { entries, .. }
+				| HomeComponentValue::Stack { entries, .. }
+				| HomeComponentValue::Vertical { entries, .. } => entries.len(),
+				_ => 0,
+			};
+			println!("{:?}: {count}", c.title);
+			// The Vertical grid is sent empty; the app loads it itself.
+			if !matches!(c.value, HomeComponentValue::Vertical { .. }) {
+				assert!(count > 0, "{:?}", c.title);
+			}
+		}
+		assert_eq!(home.components.len(), 3);
+	}
+}
