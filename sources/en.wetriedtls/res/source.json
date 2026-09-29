@@ -1,0 +1,30 @@
+{
+	"info": {
+		"id": "en.wetriedtls",
+		"name": "We Tried TLS",
+		"version": 1,
+		"url": "https://wetriedtls.com",
+		"contentRating": 1,
+		"languages": [
+			"en"
+		]
+	},
+	"listings": [
+		{
+			"id": "popular",
+			"name": "Popular"
+		},
+		{
+			"id": "latest",
+			"name": "Latest Updates"
+		},
+		{
+			"id": "newest",
+			"name": "Newest"
+		},
+		{
+			"id": "top_rated",
+			"name": "Top Rated"
+		}
+	]
+}
