@@ -20,7 +20,6 @@ impl Source for NovelFire {
 	// this method is called once when the source is initialized
 	// perform any necessary setup here
 	fn new() -> Self {
-		println!("hello is this source working");
 		Self
 	}
 
@@ -129,7 +128,6 @@ impl Source for NovelFire {
 		}
 		if needs_chapters {
 			let url = format!("{}/book/{}/chapters?page={}", BASE_URL, novel.key, page);
-			println!("Fetching chapters from URL: {}", &url);
 			let html = Request::get(url)?.html()?;
 
 			let chapters: Vec<Chapter> = html
@@ -180,7 +178,6 @@ impl Source for NovelFire {
 			let has_more = html
 				.select_first(".pagination li.page-item:last-child")
 				.is_some_and(|el| !el.has_class("disabled"));
-			println!("novel chapter count {}", chapters.len());
 			novel.chapters = Some(chapters);
 			novel.has_more_chapters = Some(has_more);
 		}

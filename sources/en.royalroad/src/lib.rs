@@ -20,7 +20,6 @@ impl Source for RoyalRoad {
 	// this method is called once when the source is initialized
 	// perform any necessary setup here
 	fn new() -> Self {
-		println!("hello is this source working");
 		Self
 	}
 
@@ -38,9 +37,6 @@ impl Source for RoyalRoad {
 		qs.push("globalFilters", Some("false"));
 		qs.push("title", query.as_deref());
 		qs.push("page", Some(&page.to_string()));
-		println!("query: {:?}", query);
-		println!("page: {:?}", page);
-		println!("filters: {:?}", filters);
 
 		for filter in filters {
 			match filter {
@@ -299,7 +295,6 @@ impl Source for RoyalRoad {
 		let url = format!("{}/fiction/{}/chapter/{}", BASE_URL, novel.key, chapter.key);
 		let html = Request::get(&url)?.html()?;
 
-		println!("Fetching chapter content from URL: {}", &url);
 		let mut content_list: Vec<ContentBlock> = html
 			.select(".chapter-content")
 			.map(|els| {
