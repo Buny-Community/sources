@@ -1,0 +1,30 @@
+{
+	"info": {
+		"id": "en.fenrirrealm",
+		"name": "Fenrir Realm",
+		"version": 1,
+		"url": "https://fenrirealm.com",
+		"contentRating": 1,
+		"languages": [
+			"en"
+		]
+	},
+	"listings": [
+		{
+			"id": "popular",
+			"name": "Popular"
+		},
+		{
+			"id": "trending",
+			"name": "Trending"
+		},
+		{
+			"id": "updated",
+			"name": "Latest Updates"
+		},
+		{
+			"id": "latest",
+			"name": "New Series"
+		}
+	]
+}
