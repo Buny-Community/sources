@@ -1,0 +1,128 @@
+[
+	{
+		"type": "sort",
+		"id": "sort",
+		"canAscend": true,
+		"options": [
+			"Popular",
+			"Trending",
+			"New",
+			"Rating",
+			"Chapters",
+			"Name"
+		],
+		"default": {
+			"index": 0,
+			"ascending": false
+		}
+	},
+	{
+		"type": "select",
+		"id": "status",
+		"title": "Status",
+		"options": [
+			"All",
+			"Ongoing",
+			"Completed",
+			"Hiatus"
+		],
+		"ids": [
+			"All",
+			"Ongoing",
+			"Completed",
+			"Hiatus"
+		]
+	},
+	{
+		"type": "select",
+		"id": "language",
+		"title": "Language",
+		"options": [
+			"All",
+			"Chinese",
+			"Korean"
+		],
+		"ids": [
+			"All",
+			"Chinese",
+			"Korean"
+		]
+	},
+	{
+		"type": "multi-select",
+		"id": "genres",
+		"title": "Genres",
+		"isGenre": true,
+		"canExclude": false,
+		"options": [
+			"Action",
+			"Alchemy",
+			"Celebrity",
+			"Cheat Systems",
+			"Comedy",
+			"Cooking",
+			"Crafting",
+			"Cultivation",
+			"Dungeon Crawling",
+			"Esports",
+			"Fantasy",
+			"Female Protagonist",
+			"Harem",
+			"Kingdom Building",
+			"LitRPG",
+			"Mature",
+			"Modern Setting",
+			"Mystery",
+			"Pets",
+			"Political Intrigue",
+			"Post-apocalyptic",
+			"Reincarnator",
+			"Romance",
+			"Sci-fi",
+			"Slice of Life",
+			"Sports",
+			"Superpowers",
+			"Thriller",
+			"Tragedy",
+			"Virtual Reality",
+			"Wuxia",
+			"Xianxia",
+			"Xuanhuan"
+		],
+		"ids": [
+			"Action",
+			"Alchemy",
+			"Celebrity",
+			"Cheat Systems",
+			"Comedy",
+			"Cooking",
+			"Crafting",
+			"Cultivation",
+			"Dungeon Crawling",
+			"Esports",
+			"Fantasy",
+			"Female Protagonist",
+			"Harem",
+			"Kingdom Building",
+			"LitRPG",
+			"Mature",
+			"Modern Setting",
+			"Mystery",
+			"Pets",
+			"Political Intrigue",
+			"Post-apocalyptic",
+			"Reincarnator",
+			"Romance",
+			"Sci-fi",
+			"Slice of Life",
+			"Sports",
+			"Superpowers",
+			"Thriller",
+			"Tragedy",
+			"Virtual Reality",
+			"Wuxia",
+			"Xianxia",
+			"Xuanhuan"
+		]
+	}
+]
