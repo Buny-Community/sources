@@ -1,0 +1,34 @@
+{
+	"info": {
+		"id": "en.scribblehub",
+		"name": "Scribble Hub",
+		"version": 1,
+		"url": "https://www.scribblehub.com",
+		"contentRating": 1,
+		"languages": [
+			"en"
+		]
+	},
+	"listings": [
+		{
+			"id": "popular",
+			"name": "Popular"
+		},
+		{
+			"id": "trending",
+			"name": "Trending"
+		},
+		{
+			"id": "latest",
+			"name": "Latest Updates"
+		},
+		{
+			"id": "new",
+			"name": "New Series"
+		},
+		{
+			"id": "completed",
+			"name": "Completed"
+		}
+	]
+}
