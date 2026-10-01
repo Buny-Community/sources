@@ -1,0 +1,27 @@
+[package]
+name = "buny-healthcheck"
+version = "0.1.0"
+edition = "2021"
+description = "External health checker for Buny sources: drives the published source ABI against live sites"
+publish = false
+
+[[bin]]
+name = "buny-healthcheck"
+path = "src/main.rs"
+
+# Pinned: this crate depends on buny-rs internals (GlobalStore::store_encoded,
+# the len/cap result header, imports::generate_imports). Bump deliberately.
+[dependencies]
+buny = { git = "https://github.com/BunyApp/buny-rs.git", rev = "d2ef23854ebbc0ed78544a71fd5504dbd17da84c", default-features = false }
+buny-test-runner = { git = "https://github.com/BunyApp/buny-rs.git", rev = "d2ef23854ebbc0ed78544a71fd5504dbd17da84c" }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+postcard = { version = "1.1.1", features = ["alloc"] }
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wasmer = "5.0.4"
+# Must match buny-test-runner's versions so the Html/Url types unify.
+scraper = "0.22.0"
+url = "2.5.4"

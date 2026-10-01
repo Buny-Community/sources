@@ -1,0 +1,5 @@
+# wasmer 5.x references __rust_probestack, which compiler-builtins removed in
+# Rust 1.89. Until buny-rs moves to wasmer 6, the harness needs <= 1.88.
+# This pin is scoped to healthcheck/ and does not affect building sources.
+[toolchain]
+channel = "1.88.0"

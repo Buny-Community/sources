@@ -1,0 +1,212 @@
+name: Source health check
+
+# Drives every source's ABI against its live site: search, details, chapter
+# list, chapter text, and each declared listing. Sources are not modified; the
+# checker calls the same entrypoints the app calls.
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Single source to check (e.g. en.royalroad). Blank = all."
+        required: false
+        type: string
+      query:
+        description: "Search term to probe with."
+        required: false
+        default: "king"
+        type: string
+  schedule:
+    # Once a day. These are live scrapes of small sites, so don't make it hourly.
+    - cron: "17 3 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: plan
+        name: Decide which sources to check
+        env:
+          ONLY: ${{ inputs.source }}
+        run: |
+          set -euo pipefail
+          ids=()
+          for dir in sources/*/; do
+            [ -f "$dir/Cargo.toml" ] || continue
+            id="$(basename "$dir")"
+            if [ -n "$ONLY" ] && [ "$ONLY" != "$id" ]; then continue; fi
+            ids+=("$id")
+          done
+          if [ "${#ids[@]}" -eq 0 ]; then
+            echo "::error::No sources matched '${ONLY}'"
+            exit 1
+          fi
+          printf '%s\n' "${ids[@]}" | jq -R . | jq -cs '{source: .}' > matrix.json
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+          cat matrix.json
+
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned to 1.88: wasmer 5.x references __rust_probestack, which
+      # compiler-builtins dropped in 1.89. See healthcheck/rust-toolchain.toml.
+      - uses: dtolnay/rust-toolchain@1.88.0
+      # buny-test-runner pulls in font-kit for its canvas imports, which needs
+      # fontconfig at build time. Not present on ubuntu-latest by default.
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            healthcheck/target
+          key: healthcheck-${{ runner.os }}-${{ hashFiles('healthcheck/Cargo.lock') }}
+          restore-keys: healthcheck-${{ runner.os }}-
+      - name: Build the checker
+        working-directory: healthcheck
+        run: cargo build --release --locked
+      - uses: actions/upload-artifact@v7
+        with:
+          name: healthcheck-bin
+          path: healthcheck/target/release/buny-healthcheck
+          if-no-files-found: error
+
+  check:
+    needs: [plan, harness]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      # One dead site must not hide the state of the others.
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            sources/${{ matrix.source }}/target
+          key: src-${{ matrix.source }}-${{ runner.os }}-${{ hashFiles(format('sources/{0}/Cargo.toml', matrix.source)) }}
+          restore-keys: src-${{ matrix.source }}-${{ runner.os }}-
+      - uses: actions/download-artifact@v8
+        with:
+          name: healthcheck-bin
+          path: bin
+      - run: chmod +x bin/buny-healthcheck
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # Cloudflare-fronted sources reject any ordinary HTTP client from a
+      # datacenter IP whatever headers it sends, because the TLS/HTTP2
+      # fingerprint is checked too. The gateway performs the real request with a
+      # browser fingerprint; see healthcheck/fetcher.py.
+      - name: Start fetch gateway
+        run: |
+          pip install --quiet curl_cffi
+          python healthcheck/fetcher.py &
+          for _ in $(seq 1 30); do
+            if curl -sf -o /dev/null -X POST http://127.0.0.1:8099/fetch \
+                 -H 'Content-Type: application/json' \
+                 -d '{"url":"https://example.com"}'; then
+              echo "gateway up"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::fetch gateway did not come up"
+          exit 1
+      - name: Build source
+        working-directory: sources/${{ matrix.source }}
+        run: cargo build --release
+      - name: Check ${{ matrix.source }}
+        id: check
+        env:
+          BUNY_FETCH_GATEWAY: http://127.0.0.1:8099
+        run: |
+          set -euo pipefail
+          wasm="$(find "sources/${{ matrix.source }}/target/wasm32-unknown-unknown/release" -maxdepth 1 -name '*.wasm' | head -1)"
+          if [ -z "$wasm" ]; then
+            echo "::error::no wasm produced for ${{ matrix.source }}"
+            exit 1
+          fi
+          mkdir -p reports
+          # Keep going on failure so the report is still uploaded and summarized.
+          set +e
+          ./bin/buny-healthcheck "$wasm" \
+            --name "${{ matrix.source }}" \
+            --query "${{ inputs.query || 'king' }}" \
+            --source-json "sources/${{ matrix.source }}/res/source.json" \
+            --json "reports/${{ matrix.source }}.json" \
+            | tee "reports/${{ matrix.source }}.txt"
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: report-${{ matrix.source }}
+          path: reports/
+          if-no-files-found: warn
+      - name: Fail if checks failed
+        if: steps.check.outputs.status != '0'
+        run: exit 1
+
+  summary:
+    needs: check
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: report-*
+          path: reports
+          merge-multiple: true
+      - name: Notify Discord
+        if: always()
+        env:
+          # A webhook URL encodes its own channel, so no channel ID is needed.
+          # It is a credential, so it lives in Secrets, not Variables.
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          REPORTS_DIR: reports
+        run: python3 .github/workflows/supporting/discord.py
+
+      - name: Build summary
+        run: |
+          set -euo pipefail
+          {
+            echo "## Source health"
+            echo
+            echo "| Source | Result | Detail |"
+            echo "| --- | --- | --- |"
+            for f in reports/*.json; do
+              [ -e "$f" ] || continue
+              jq -r '
+                .source as $s
+                | (if any(.checks[]; .status == "fail") then "FAIL"
+                   elif any(.checks[]; .status == "blocked") then "BLOCKED"
+                   elif any(.checks[]; .status == "warn") then "WARN"
+                   else "PASS" end) as $v
+                | ([.checks[] | select(.status == "fail" or .status == "warn" or .status == "blocked")
+                    | "\(.name): \(.detail)"] | join("<br>")) as $d
+                | "| \($s) | \($v) | \(if $d == "" then "all checks passed" else $d end) |"
+              ' "$f"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
