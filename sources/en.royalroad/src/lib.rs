@@ -4,7 +4,7 @@ use buny::{
 	Source,
 	alloc::{String, Vec, string::ToString, vec},
 	helpers::{element::ElementHelpers, uri::QueryParameters},
-	imports::{defaults::defaults_get, net::Request, std::parse_date},
+	imports::{defaults::defaults_get, net::Request},
 	prelude::*,
 };
 use chapter_numbers::{chapter_numbers, chapter_title};
@@ -250,10 +250,12 @@ impl Source for RoyalRoad {
 							.attr("href")?
 							.replace(&format!("/fiction/{}/chapter/", novel.key), "");
 						let name = link.text()?.trim().to_string();
+						// `unixtime` is in seconds. `datetime` has seven fractional
+						// digits, which the date parser does not take.
 						let date_uploaded = el
 							.select_first(".text-right a time")
-							.and_then(|time| time.attr("datetime"))
-							.and_then(|date| parse_date(date, "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ"));
+							.and_then(|time| time.attr("unixtime"))
+							.and_then(|seconds| seconds.trim().parse::<i64>().ok());
 						Some((chapter_key, name, date_uploaded))
 					})
 					.collect()
@@ -378,6 +380,11 @@ mod test {
 		assert_eq!(chapters[0].title.as_deref(), Some("Prologue"));
 		assert_eq!(chapters[1].chapter_number, Some(1.0));
 		assert_eq!(chapters[1].title.as_deref(), Some("The Void"));
+		// Seconds, between 2020 and 2100.
+		assert!(chapters.iter().all(|c| {
+			c.date_uploaded
+				.is_some_and(|d| d > 1_577_836_800 && d < 4_102_444_800)
+		}));
 		assert!(
 			chapters
 				.windows(2)
