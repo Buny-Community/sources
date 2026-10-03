@@ -1,0 +1,7 @@
+[package]
+name = "chapter-numbers"
+version = "0.1.0"
+edition = "2024"
+description = "Chapter numbers from chapter names, shared by the sources that number chapters themselves"
+
+[dependencies]
