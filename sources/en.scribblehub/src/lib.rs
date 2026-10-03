@@ -11,6 +11,7 @@ use buny::{
 	},
 	prelude::*,
 };
+use chapter_numbers::{chapter_numbers, chapter_title, split_label};
 
 mod content;
 mod traits;
@@ -49,15 +50,17 @@ fn send(request: Request) -> Result<Response> {
 	let response = request.send()?;
 	match response.status_code() {
 		200..=299 => Ok(response),
-		404 => bail!("Not found on Scribble Hub"),
+		404 => Err(error!("Not found on Scribble Hub")),
 		// Reading chapters fast (about 8 in a row) gets 429 with a Cloudflare
 		// challenge page. The app's Cloudflare handler solves it for 403, 429 and
 		// 503 before the source sees the response; this is what's left over.
-		429 => bail!("Scribble Hub is limiting how fast pages load. Try again in a minute."),
-		403 | 503 if response.get_header("cf-mitigated").is_some() => {
-			bail!("Scribble Hub's Cloudflare check blocked the request. Try again later.")
-		}
-		code => bail!("Scribble Hub returned HTTP {code}"),
+		429 => Err(error!(
+			"Scribble Hub is limiting how fast pages load. Try again in a minute."
+		)),
+		403 | 503 if response.get_header("cf-mitigated").is_some() => Err(error!(
+			"Scribble Hub's Cloudflare check blocked the request. Try again later."
+		)),
+		code => Err(error!("Scribble Hub returned HTTP {code}")),
 	}
 }
 
@@ -91,7 +94,7 @@ impl ScribbleHub {
 			"completed" => format!(
 				"{BASE_URL}/series-finder/?sf=1&cp=completed&sort=pageviews&order=desc&pg={page}"
 			),
-			_ => bail!("Unknown listing: {id}"),
+			_ => return Err(error!("Unknown listing: {id}")),
 		};
 		Self::novel_page(&url)
 	}
@@ -477,161 +480,6 @@ fn parse_chapter_date(value: &str) -> Option<i64> {
 		return Some(current_date() - n * secs);
 	}
 	parse_date(value, "MMM d, yyyy hh:mm a").or_else(|| parse_date(value, "MMM d, yyyy"))
-}
-
-// Splits a chapter label off the start of `s`: "Chapter 12", "Chapter 01 :",
-// "Ch. 12", "Chapter no.1:", "Episode 3", or a bare "12." / "12:" / "12 -" /
-// "12 |" / "12". Returns the number and the rest, without its leading
-// separator.
-fn split_label(s: &str) -> Option<(f32, &str)> {
-	split_label_with(s, false)
-}
-
-// `loose` also takes a bare number followed by a space ("01 Long Ago"), which
-// is only trusted when most of a series' chapters are named that way.
-fn split_label_with(s: &str, loose: bool) -> Option<(f32, &str)> {
-	let s = s.trim_start();
-	let word_end = s
-		.find(|c: char| !c.is_ascii_alphabetic() && c != '.')
-		.unwrap_or(s.len());
-	let word = &s[..word_end];
-	let rest = if word.is_empty() {
-		s
-	} else if [
-		"chapter", "chapter.", "ch.", "ch", "chp", "chp.", "chatper", "chaper", "chapater",
-		"episode", "ep", "ep.",
-	]
-	.iter()
-	.any(|w| word.eq_ignore_ascii_case(w))
-	{
-		// "Chapter . 5", "Chapter: 5", "Chapter #5", "Chapter no.5"
-		let rest = s[word_end..]
-			.trim_start_matches(|c: char| c.is_whitespace() || matches!(c, '.' | ':' | '#'));
-		match rest.get(..2) {
-			Some(no) if no.eq_ignore_ascii_case("no") => {
-				rest[2..].trim_start_matches(|c: char| c.is_whitespace() || c == '.')
-			}
-			_ => rest,
-		}
-	} else {
-		return None;
-	};
-	let digits_end = rest
-		.find(|c: char| !c.is_ascii_digit() && c != '.')
-		.unwrap_or(rest.len());
-	let digits = rest[..digits_end].trim_end_matches('.');
-	if digits.is_empty() {
-		return None;
-	}
-	let number: f32 = digits.parse().ok()?;
-	let after = &rest[digits.len()..];
-	// A bare number must be the whole name or be followed by a separator
-	// ("12. Name", "12: Name", "12 - Name"), so a title that starts with a
-	// number ("100 Days") stays.
-	if word.is_empty()
-		&& !after.trim().is_empty()
-		&& !after.starts_with(['.', ':'])
-		&& !after.trim_start().starts_with(['-', '–', '—', ':', '|'])
-		&& !(loose && after.starts_with(' '))
-	{
-		return None;
-	}
-	// "Chapter 3" followed by more digits or letters ("Chapter 3rd") isn't a label.
-	if after.starts_with(|c: char| c.is_ascii_alphanumeric()) {
-		return None;
-	}
-	Some((
-		number,
-		after.trim_start_matches(|c: char| {
-			c.is_whitespace() || matches!(c, '-' | ':' | '–' | '—' | '.' | '|')
-		}),
-	))
-}
-
-// Reader sorts chapters on their number and merges ones with the same number,
-// so numbers must be unique and rising. Authors name chapters freely: most
-// label them ("Chapter 12 – Name", "12: Name"), and many add unlabeled ones
-// (a prologue, character sheets, interludes, an epilogue).
-//
-// When at least 80% of chapters carry a label and the labels rise in reading
-// order, the labels are used, and each unlabeled chapter gets a number between
-// its labeled neighbours (a prologue before "Chapter 1" becomes 0.5). Otherwise
-// every chapter is numbered by position.
-fn chapter_numbers(names: &[&str]) -> Vec<f32> {
-	let labels = |loose: bool| -> Vec<Option<f32>> {
-		names
-			.iter()
-			.map(|n| split_label_with(n, loose).map(|(num, _)| num))
-			.collect()
-	};
-	label_numbers(&labels(false))
-		.or_else(|| label_numbers(&labels(true)))
-		.unwrap_or_else(|| (1..=names.len()).map(|i| i as f32).collect())
-}
-
-fn label_numbers(labels: &[Option<f32>]) -> Option<Vec<f32>> {
-	let labeled: Vec<f32> = labels.iter().flatten().copied().collect();
-	let rising = labeled.windows(2).all(|w| w[0] < w[1]);
-	if labeled.is_empty() || labeled.len() * 5 < labels.len() * 4 || !rising {
-		return None;
-	}
-
-	let mut out = Vec::with_capacity(labels.len());
-	let mut i = 0;
-	while i < labels.len() {
-		if let Some(n) = labels[i] {
-			out.push(n);
-			i += 1;
-			continue;
-		}
-		// A run of unlabeled chapters between two labels (or an end).
-		let run_end = (i..labels.len())
-			.find(|&j| labels[j].is_some())
-			.unwrap_or(labels.len());
-		let prev = if i == 0 { None } else { labels[i - 1] };
-		let next = labels.get(run_end).copied().flatten();
-		let (low, high) = match (prev, next) {
-			(Some(p), Some(n)) => (p, n),
-			(None, Some(n)) => (n - 1.0, n),
-			(Some(p), None) => (p, p + 1.0),
-			(None, None) => (0.0, 1.0),
-		};
-		let count = run_end - i;
-		for k in 1..=count {
-			let n = low + (high - low) * k as f32 / (count + 1) as f32;
-			out.push(round2(n));
-		}
-		i = run_end;
-	}
-	// Rounding can collapse numbers in a long run of unlabeled chapters between
-	// close labels.
-	out.windows(2).all(|w| w[0] < w[1]).then_some(out)
-}
-
-// Two decimals, so a prologue shows as 0.5 rather than 0.49999.
-fn round2(n: f32) -> f32 {
-	let scaled = n * 100.0;
-	let rounded = if scaled >= 0.0 {
-		(scaled + 0.5) as i64
-	} else {
-		(scaled - 0.5) as i64
-	};
-	rounded as f32 / 100.0
-}
-
-// The app shows the chapter number separately, so a label is dropped from the
-// title when its number is the one sent. A name that is only a label
-// ("Chapter 5") has no title.
-fn chapter_title(name: &str, number: f32) -> Option<String> {
-	let name = name.trim();
-	let title = [false, true]
-		.iter()
-		.find_map(|&loose| match split_label_with(name, loose) {
-			Some((n, rest)) if n == number => Some(rest.trim()),
-			_ => None,
-		})
-		.unwrap_or(name);
-	(!title.is_empty()).then(|| title.to_string())
 }
 
 // Decodes the entities the site's editor emits. Anything else goes to the

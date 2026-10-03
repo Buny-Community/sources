@@ -6,6 +6,7 @@ on:
     paths:
       - "sources/**"
       - "templates/**"
+      - "crates/**"
       - ".github/workflows/build.yaml"
 
 concurrency:

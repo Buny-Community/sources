@@ -4,9 +4,10 @@ use buny::{
 	Source,
 	alloc::{String, Vec, string::ToString, vec},
 	helpers::{element::ElementHelpers, uri::QueryParameters},
-	imports::{defaults::defaults_get, net::Request, std::parse_date},
+	imports::{defaults::defaults_get, net::Request},
 	prelude::*,
 };
+use chapter_numbers::{chapter_numbers, chapter_title};
 
 pub mod traits;
 
@@ -240,46 +241,42 @@ impl Source for RoyalRoad {
 			novel.url = Some(url);
 		}
 		if needs_chapters {
-			let mut chapnum: f32 = 0.0;
-			let chapters: Vec<Chapter> = info_div
+			let rows: Vec<(String, String, Option<i64>)> = info_div
 				.select(".chapter-row")
 				.map(|els| {
 					els.filter_map(|el| {
-						let chapter_key = el
-							.select_first("a")
-							.unwrap()
-							.attr("href")
-							.unwrap()
+						let link = el.select_first("a")?;
+						let chapter_key = link
+							.attr("href")?
 							.replace(&format!("/fiction/{}/chapter/", novel.key), "");
-						chapnum += 1.0;
-						let title = el.select_first("a").unwrap().text().unwrap().to_string();
+						let name = link.text()?.trim().to_string();
+						// `unixtime` is in seconds. `datetime` has seven fractional
+						// digits, which the date parser does not take.
 						let date_uploaded = el
 							.select_first(".text-right a time")
-							.unwrap()
-							.attr("datetime")
-							.unwrap()
-							.to_string();
-
-						Some(Chapter {
-							key: chapter_key.clone(),
-							chapter_number: Some(chapnum),
-							title: Some(title),
-							url: Some(format!(
-								"{}/fiction/{}/chapter/{}",
-								BASE_URL,
-								novel.key,
-								chapter_key.clone()
-							)),
-							date_uploaded: parse_date(
-								date_uploaded,
-								"yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ",
-							),
-							..Default::default()
-						})
+							.and_then(|time| time.attr("unixtime"))
+							.and_then(|seconds| seconds.trim().parse::<i64>().ok());
+						Some((chapter_key, name, date_uploaded))
 					})
-					.collect::<Vec<Chapter>>()
+					.collect()
 				})
 				.unwrap_or_default();
+			let names: Vec<&str> = rows.iter().map(|(_, name, _)| name.as_str()).collect();
+			let chapters: Vec<Chapter> = rows
+				.iter()
+				.zip(chapter_numbers(&names))
+				.map(|((chapter_key, name, date_uploaded), number)| Chapter {
+					key: chapter_key.clone(),
+					chapter_number: Some(number),
+					title: chapter_title(name, number),
+					url: Some(format!(
+						"{}/fiction/{}/chapter/{}",
+						BASE_URL, novel.key, chapter_key
+					)),
+					date_uploaded: *date_uploaded,
+					..Default::default()
+				})
+				.collect();
 
 			novel.chapters = Some(chapters);
 			novel.has_more_chapters = Some(false);
@@ -360,6 +357,40 @@ mod test {
 	use super::*;
 	use buny::{Home, HomeComponentValue, Listing, ListingProvider};
 	use buny_test::buny_test;
+
+	#[buny_test]
+	fn test_chapter_numbers() {
+		// "Prologue", then "Chapter 1 - The Void": the prologue goes before
+		// chapter 1 instead of pushing every chapter up by one.
+		let novel = RoyalRoad::new()
+			.get_novel_update(
+				Novel {
+					key: "145896/dao-of-the-world-walker-craft-based-slice-of-life".into(),
+					..Default::default()
+				},
+				false,
+				true,
+				1,
+			)
+			.unwrap();
+		let chapters = novel.chapters.unwrap();
+		println!("{} chapters", chapters.len());
+		assert!(chapters.len() > 200);
+		assert_eq!(chapters[0].chapter_number, Some(0.5));
+		assert_eq!(chapters[0].title.as_deref(), Some("Prologue"));
+		assert_eq!(chapters[1].chapter_number, Some(1.0));
+		assert_eq!(chapters[1].title.as_deref(), Some("The Void"));
+		// Seconds, between 2020 and 2100.
+		assert!(chapters.iter().all(|c| {
+			c.date_uploaded
+				.is_some_and(|d| d > 1_577_836_800 && d < 4_102_444_800)
+		}));
+		assert!(
+			chapters
+				.windows(2)
+				.all(|w| w[0].chapter_number < w[1].chapter_number)
+		);
+	}
 
 	#[buny_test]
 	fn test_listings() {

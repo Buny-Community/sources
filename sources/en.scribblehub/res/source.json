@@ -2,7 +2,7 @@
 	"info": {
 		"id": "en.scribblehub",
 		"name": "Scribble Hub",
-		"version": 1,
+		"version": 2,
 		"url": "https://www.scribblehub.com",
 		"contentRating": 1,
 		"languages": [

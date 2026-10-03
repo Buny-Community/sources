@@ -14,6 +14,8 @@ sources/*/public
 sources/*/cargo.lock
 sources/*/Cargo.lock
 templates/*/target
+crates/*/target
+crates/*/Cargo.lock
 
 .idea
 *.iml

@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 buny = { git = "https://github.com/BunyApp/buny-rs.git", version = "0.1.0" }
+chapter-numbers = { path = "../../crates/chapter-numbers" }
 
 [dev-dependencies]
 buny = { git = "https://github.com/BunyApp/buny-rs.git", features = ["test"] }

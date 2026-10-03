@@ -7,6 +7,7 @@ use buny::{
 	imports::{html::Document, net::Request},
 	prelude::*,
 };
+use chapter_numbers::{chapter_numbers, chapter_title};
 
 mod home;
 
@@ -206,24 +207,28 @@ impl Source for NovelFull {
 				let chapter_list_url = format!("{BASE_URL}/ajax-chapter-option?novelId={novel_id}");
 				let chapter_html = Request::get(&chapter_list_url)?.html()?;
 
-				let mut chapter_number: f32 = 0.0;
-				let chapters: Vec<Chapter> = chapter_html
+				let options: Vec<(String, String)> = chapter_html
 					.select("select > option")
 					.map(|els| {
 						els.filter_map(|opt| {
 							let key = opt.attr("value")?.trim_start_matches('/').to_string();
-							let title = opt.text()?.trim().to_string();
-							chapter_number += 1.0;
-							Some(Chapter {
-								key,
-								title: Some(title),
-								chapter_number: Some(chapter_number),
-								..Default::default()
-							})
+							let name = opt.text()?.trim().to_string();
+							Some((key, name))
 						})
 						.collect()
 					})
 					.unwrap_or_default();
+				let names: Vec<&str> = options.iter().map(|(_, name)| name.as_str()).collect();
+				let chapters: Vec<Chapter> = options
+					.iter()
+					.zip(chapter_numbers(&names))
+					.map(|((key, name), number)| Chapter {
+						key: key.clone(),
+						title: chapter_title(name, number),
+						chapter_number: Some(number),
+						..Default::default()
+					})
+					.collect();
 
 				novel.chapters = Some(chapters);
 				novel.has_more_chapters = Some(false);
@@ -356,7 +361,14 @@ mod tests {
 		let chapters = updated.chapters.expect("no chapters");
 		println!("chapter_count: {}", chapters.len());
 		assert!(!chapters.is_empty());
-		assert!(chapters[0].title.is_some());
+		// "Chapter 1 - Starting Over": the label is the number, the rest the title.
+		assert_eq!(chapters[0].chapter_number, Some(1.0));
+		assert_eq!(chapters[0].title.as_deref(), Some("Starting Over"));
+		assert!(
+			chapters
+				.windows(2)
+				.all(|w| w[0].chapter_number < w[1].chapter_number)
+		);
 
 		let content = source
 			.get_chapter_content_list(
