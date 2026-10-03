@@ -50,15 +50,17 @@ fn send(request: Request) -> Result<Response> {
 	let response = request.send()?;
 	match response.status_code() {
 		200..=299 => Ok(response),
-		404 => bail!("Not found on Scribble Hub"),
+		404 => Err(error!("Not found on Scribble Hub")),
 		// Reading chapters fast (about 8 in a row) gets 429 with a Cloudflare
 		// challenge page. The app's Cloudflare handler solves it for 403, 429 and
 		// 503 before the source sees the response; this is what's left over.
-		429 => bail!("Scribble Hub is limiting how fast pages load. Try again in a minute."),
-		403 | 503 if response.get_header("cf-mitigated").is_some() => {
-			bail!("Scribble Hub's Cloudflare check blocked the request. Try again later.")
-		}
-		code => bail!("Scribble Hub returned HTTP {code}"),
+		429 => Err(error!(
+			"Scribble Hub is limiting how fast pages load. Try again in a minute."
+		)),
+		403 | 503 if response.get_header("cf-mitigated").is_some() => Err(error!(
+			"Scribble Hub's Cloudflare check blocked the request. Try again later."
+		)),
+		code => Err(error!("Scribble Hub returned HTTP {code}")),
 	}
 }
 
@@ -92,7 +94,7 @@ impl ScribbleHub {
 			"completed" => format!(
 				"{BASE_URL}/series-finder/?sf=1&cp=completed&sort=pageviews&order=desc&pg={page}"
 			),
-			_ => bail!("Unknown listing: {id}"),
+			_ => return Err(error!("Unknown listing: {id}")),
 		};
 		Self::novel_page(&url)
 	}
