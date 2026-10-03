@@ -4,6 +4,7 @@ on:
     paths:
       - "sources/**"
       - "templates/**"
+      - "crates/**"
 
 jobs:
   lint:
@@ -43,7 +44,7 @@ jobs:
           readarray -t TEMP <<< "$(jq -r '.[]' <<<'${{ steps.files.outputs.added_modified }}')"
 
           while IFS= read -r -d $'\0' i; do
-            if [[ "$i" == *"sources"* || "$i" == *"templates"* ]]; then
+            if [[ "$i" == *"sources"* || "$i" == *"templates"* || "$i" == *"crates"* ]]; then
               (
                 cd "$i"
                 cargo clippy --message-format=json > annotations.json
@@ -51,7 +52,7 @@ jobs:
                    -rsf ${{ github.workspace }}/.github/workflows/supporting/annotations.jq annotations.json
               )
             fi
-          done < <(printf "%s\n" "${TEMP[@]}" | cut -d'/' -f-2 | sort -u | grep -E '^(sources|templates)' | tr '\n' '\0')
+          done < <(printf "%s\n" "${TEMP[@]}" | cut -d'/' -f-2 | sort -u | grep -E '^(sources|templates|crates)' | tr '\n' '\0')
           echo "::endgroup::"
 
           echo "::group::Generating summary"
