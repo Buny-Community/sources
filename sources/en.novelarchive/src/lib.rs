@@ -7,6 +7,7 @@ use buny::{
 	imports::net::Request,
 	prelude::*,
 };
+use chapter_numbers::{chapter_numbers, chapter_title};
 
 pub(crate) mod model;
 use model::{ChapterResponse, NovelDetailResponse, NovelListResponse, NovelSummary};
@@ -214,25 +215,26 @@ impl Source for NovelArchive {
 			}
 
 			if needs_chapters {
-				// matches the site's own numbering scheme (`number = index + 1`)
-				let chapters: Vec<Chapter> = detail
-					.chapter_names
-					.into_iter()
+				let names: Vec<&str> = detail.chapter_names.iter().map(String::as_str).collect();
+				let numbers = chapter_numbers(&names);
+				// The site addresses chapters by their 1-based position, so that's
+				// the key. The number comes from the names: a list can start at
+				// "Chapter 0".
+				let chapters: Vec<Chapter> = names
+					.iter()
+					.zip(numbers)
 					.enumerate()
-					.map(|(i, name)| {
-						let number = (i + 1) as f32;
-						Chapter {
-							key: (i + 1).to_string(),
-							title: Some(name),
-							chapter_number: Some(number),
-							url: Some(format!(
-								"{}/reader?novel={}&chapter={}",
-								BASE_URL,
-								novel.key,
-								i + 1
-							)),
-							..Default::default()
-						}
+					.map(|(i, (name, number))| Chapter {
+						key: (i + 1).to_string(),
+						title: chapter_title(name, number),
+						chapter_number: Some(number),
+						url: Some(format!(
+							"{}/reader?novel={}&chapter={}",
+							BASE_URL,
+							novel.key,
+							i + 1
+						)),
+						..Default::default()
 					})
 					.collect();
 				novel.chapters = Some(chapters);
@@ -269,6 +271,60 @@ mod test {
 	use super::*;
 	use buny::{Home, HomeComponentValue};
 	use buny_test::buny_test;
+
+	#[buny_test]
+	fn test_chapter_numbers() {
+		// "A Knight Who Eternally Regresses" starts at "Chapter 0: Prologue",
+		// and labels chapter 119 "Chapter 118: Leap".
+		let novel = NovelArchive::new()
+			.get_novel_update(
+				Novel {
+					key: "69fede66a5f4c7d1b734e190".into(),
+					..Default::default()
+				},
+				true,
+				true,
+				1,
+			)
+			.unwrap();
+		let chapters = novel.chapters.unwrap();
+		println!("{} chapters", chapters.len());
+		assert!(chapters.len() > 950);
+		let first = &chapters[0];
+		assert_eq!(first.key, "1");
+		assert_eq!(first.chapter_number, Some(0.0));
+		assert_eq!(first.title.as_deref(), Some("Prologue"));
+		assert_eq!(
+			first.url.as_deref(),
+			Some("https://novelarchive.cc/reader?novel=69fede66a5f4c7d1b734e190&chapter=1")
+		);
+		assert_eq!(chapters[1].chapter_number, Some(1.0));
+		assert_eq!(
+			chapters[1].title.as_deref(),
+			Some("My Dream was to be a Knight")
+		);
+		assert_eq!(chapters[119].chapter_number, Some(119.0));
+		assert_eq!(chapters[119].title.as_deref(), Some("Chapter 118: Leap"));
+		assert_eq!(chapters[120].chapter_number, Some(120.0));
+		assert!(
+			chapters
+				.windows(2)
+				.all(|w| w[0].chapter_number < w[1].chapter_number)
+		);
+
+		// The key still opens the chapter at that position.
+		let blocks = NovelArchive::new()
+			.get_chapter_content_list(
+				Novel {
+					key: "69fede66a5f4c7d1b734e190".into(),
+					..Default::default()
+				},
+				first.clone(),
+			)
+			.unwrap();
+		println!("{} blocks", blocks.len());
+		assert!(blocks.len() > 10);
+	}
 
 	#[buny_test]
 	fn test_home() {
