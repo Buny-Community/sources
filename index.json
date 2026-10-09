@@ -1,0 +1,125 @@
+{
+  "name": "Buny Community Sources",
+  "sources": [
+    {
+      "id": "en.chikari",
+      "name": "Chikari",
+      "version": 2,
+      "iconURL": "icons/en.chikari-v2.png",
+      "downloadURL": "sources/en.chikari-v2.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://chikari.moe"
+    },
+    {
+      "id": "en.fenrirrealm",
+      "name": "Fenrir Realm",
+      "version": 1,
+      "iconURL": "icons/en.fenrirrealm-v1.png",
+      "downloadURL": "sources/en.fenrirrealm-v1.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://fenrirealm.com"
+    },
+    {
+      "id": "en.novelarchive",
+      "name": "Novel Archive",
+      "version": 4,
+      "iconURL": "icons/en.novelarchive-v4.png",
+      "downloadURL": "sources/en.novelarchive-v4.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://novelarchive.cc"
+    },
+    {
+      "id": "en.novelbuddy",
+      "name": "Novel Buddy",
+      "version": 6,
+      "iconURL": "icons/en.novelbuddy-v6.png",
+      "downloadURL": "sources/en.novelbuddy-v6.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 0,
+      "baseURL": "https://novelbuddy.me"
+    },
+    {
+      "id": "en.scribblehub",
+      "name": "Scribble Hub",
+      "version": 2,
+      "iconURL": "icons/en.scribblehub-v2.png",
+      "downloadURL": "sources/en.scribblehub-v2.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://www.scribblehub.com"
+    },
+    {
+      "id": "en.wetriedtls",
+      "name": "We Tried TLS",
+      "version": 1,
+      "iconURL": "icons/en.wetriedtls-v1.png",
+      "downloadURL": "sources/en.wetriedtls-v1.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://wetriedtls.com"
+    },
+    {
+      "id": "en.wuxiaworld",
+      "name": "Wuxiaworld",
+      "version": 1,
+      "iconURL": "icons/en.wuxiaworld-v1.png",
+      "downloadURL": "sources/en.wuxiaworld-v1.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://www.wuxiaworld.com"
+    },
+    {
+      "id": "novelfire",
+      "name": "Novel Fire",
+      "version": 7,
+      "iconURL": "icons/novelfire-v7.png",
+      "downloadURL": "sources/novelfire-v7.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 0,
+      "baseURL": "https://novelfire.net"
+    },
+    {
+      "id": "novelfull",
+      "name": "NovelFull",
+      "version": 3,
+      "iconURL": "icons/novelfull-v3.png",
+      "downloadURL": "sources/novelfull-v3.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://novelfull.com"
+    },
+    {
+      "id": "royalroad",
+      "name": "Royalroad",
+      "version": 4,
+      "iconURL": "icons/royalroad-v4.png",
+      "downloadURL": "sources/royalroad-v4.bunpack",
+      "languages": [
+        "en"
+      ],
+      "contentRating": 1,
+      "baseURL": "https://www.royalroad.com"
+    }
+  ]
+}
