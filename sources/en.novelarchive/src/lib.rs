@@ -257,7 +257,15 @@ impl Source for NovelArchive {
 			.content
 			.split('\n')
 			.filter(|p| !p.trim().is_empty())
-			.map(|p| ContentBlock::paragraph(p.trim(), None))
+			.map(|p| {
+				let p = p.trim();
+				// System-window messages such as "[You have slain a dormant beast.]".
+				if p.len() > 2 && p.starts_with('[') && p.ends_with(']') {
+					ContentBlock::block_quote(p)
+				} else {
+					ContentBlock::paragraph(p, None)
+				}
+			})
 			.collect();
 
 		Ok(content_list)
@@ -324,6 +332,26 @@ mod test {
 			.unwrap();
 		println!("{} blocks", blocks.len());
 		assert!(blocks.len() > 10);
+	}
+
+	#[buny_test]
+	fn test_banner() {
+		// Shadow Slave chapter 5 opens with a system message.
+		let blocks = NovelArchive::new()
+			.get_chapter_content_list(
+				Novel {
+					key: "69faa859a5f4c7d1b734d496".into(),
+					..Default::default()
+				},
+				Chapter {
+					key: "5".into(),
+					..Default::default()
+				},
+			)
+			.unwrap();
+		assert!(
+			matches!(&blocks[0], ContentBlock::BlockQuote(t) if t.starts_with("[You have slain"))
+		);
 	}
 
 	#[buny_test]

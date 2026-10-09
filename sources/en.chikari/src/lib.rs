@@ -50,14 +50,14 @@ impl Chikari {
 			.header("Referer", &format!("{BASE_URL}/"))
 			.json_owned()?;
 		match &json["detail"] {
-			Value::String(msg) => bail!("{msg}"),
-			Value::Array(errors) => bail!(
+			Value::String(msg) => Err(error!("{msg}")),
+			Value::Array(errors) => Err(error!(
 				"{}",
 				errors
 					.first()
 					.and_then(|e| e["msg"].as_str())
 					.unwrap_or("Request rejected")
-			),
+			)),
 			_ => Ok(json),
 		}
 	}
@@ -301,6 +301,8 @@ impl Source for Chikari {
 			.map(|text| {
 				if is_scene_break(&text) {
 					ContentBlock::Divider
+				} else if is_banner(&text) {
+					ContentBlock::block_quote(text)
 				} else {
 					ContentBlock::paragraph(text, None)
 				}
@@ -381,6 +383,11 @@ fn chapter_title(raw: &str) -> Option<String> {
 fn is_scene_break(text: &str) -> bool {
 	let stripped: String = text.chars().filter(|c| !c.is_whitespace()).collect();
 	stripped.len() >= 3 && stripped.chars().all(|c| matches!(c, '*' | '~' | '=' | '#'))
+}
+
+// System-window messages, e.g. "[You have slain a dormant beast.]".
+fn is_banner(text: &str) -> bool {
+	text.len() > 2 && text.starts_with('[') && text.ends_with(']')
 }
 
 // Chapter bodies are plain text with "\n"-separated paragraphs, sprinkled with a few
@@ -609,6 +616,16 @@ mod test {
 			&home.components[0].value,
 			HomeComponentValue::ImageScroller { links, .. } if !links.is_empty()
 		));
+	}
+
+	#[buny_test]
+	fn test_banner() {
+		assert!(is_banner(
+			"[You have slain a dormant beast, Mountain King's Larva.]"
+		));
+		assert!(!is_banner("[]"));
+		assert!(!is_banner("[Sunny] nodded."));
+		assert!(!is_banner("He read [the note]. Then left"));
 	}
 
 	#[buny_test]
