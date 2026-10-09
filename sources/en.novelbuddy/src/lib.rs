@@ -324,6 +324,9 @@ impl Source for NovelBuddy {
 			.map(|text| {
 				if text == "***" {
 					ContentBlock::Divider
+				} else if text.len() > 2 && text.starts_with('[') && text.ends_with(']') {
+					// System-window messages such as "[You have slain a dormant beast.]".
+					ContentBlock::block_quote(text)
 				} else {
 					ContentBlock::paragraph(text, None)
 				}
@@ -497,6 +500,14 @@ mod test {
 			.unwrap();
 		println!("{:?}", &content[..2]);
 		assert!(content.len() > 10);
+
+		// Chapter 5 opens with a system message.
+		let content = source
+			.get_chapter_content_list(Novel::default(), chapters[4].clone())
+			.unwrap();
+		assert!(
+			matches!(&content[0], ContentBlock::BlockQuote(t) if t.starts_with("[You have slain"))
+		);
 	}
 
 	#[buny_test]
