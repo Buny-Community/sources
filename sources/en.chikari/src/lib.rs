@@ -50,14 +50,14 @@ impl Chikari {
 			.header("Referer", &format!("{BASE_URL}/"))
 			.json_owned()?;
 		match &json["detail"] {
-			Value::String(msg) => bail!("{msg}"),
-			Value::Array(errors) => bail!(
+			Value::String(msg) => Err(error!("{msg}")),
+			Value::Array(errors) => Err(error!(
 				"{}",
 				errors
 					.first()
 					.and_then(|e| e["msg"].as_str())
 					.unwrap_or("Request rejected")
-			),
+			)),
 			_ => Ok(json),
 		}
 	}
