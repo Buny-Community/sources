@@ -349,13 +349,14 @@ register_source!(
 	// after the name of the source struct, list all the extra traits it implements
 	ListingProvider,
 	Home,
-	DeepLinkHandler
+	DeepLinkHandler,
+	ReviewProvider
 );
 
 #[cfg(test)]
 mod test {
 	use super::*;
-	use buny::{Home, HomeComponentValue, Listing, ListingProvider};
+	use buny::{Home, HomeComponentValue, Listing, ListingProvider, ReviewProvider};
 	use buny_test::buny_test;
 
 	#[buny_test]
@@ -430,5 +431,37 @@ mod test {
 			}
 		}
 		assert_eq!(home.components.len(), 5);
+	}
+
+	#[buny_test]
+	fn test_reviews() {
+		let novel = Novel {
+			key: "21220/mother-of-learning".into(),
+			..Default::default()
+		};
+		let source = RoyalRoad::new();
+		let result = source.get_novel_reviews(novel.clone(), 1).unwrap();
+		println!(
+			"{} reviews, next: {}",
+			result.entries.len(),
+			result.has_next_page
+		);
+		if let Some(r) = result.entries.first() {
+			println!("{r:?}");
+		}
+		assert!(!result.entries.is_empty());
+		assert!(result.has_next_page);
+		for r in &result.entries {
+			assert!(!r.author.is_empty());
+			assert!(r.content.as_deref().is_some_and(|c| !c.is_empty()));
+			assert!(r.rating.is_some_and(|x| (0.0..=1.0).contains(&x)));
+			assert!(
+				r.date
+					.is_some_and(|d| d > 1_262_304_000 && d < 4_102_444_800)
+			);
+		}
+		let past_end = source.get_novel_reviews(novel, 9999).unwrap();
+		assert!(past_end.entries.is_empty());
+		assert!(!past_end.has_next_page);
 	}
 }

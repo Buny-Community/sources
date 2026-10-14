@@ -2,3 +2,4 @@
 pub mod deep_link_handler;
 pub mod home;
 pub mod listingprovider;
+pub mod review_provider;
