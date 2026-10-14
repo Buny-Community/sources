@@ -18,6 +18,7 @@ const BASE_URL: &str = "https://novelbuddy.me";
 const API_URL: &str = "https://api.novelbuddy.me";
 
 mod home;
+mod reviews;
 
 const DATE_FORMAT: &str = "yyyy-MM-dd HH:mm:ss";
 
@@ -263,11 +264,7 @@ impl Source for NovelBuddy {
 		}
 
 		if needs_chapters {
-			let id = page_props["mangaHsid"]
-				.as_str()
-				.or_else(|| manga["id"].as_str())
-				.filter(|s| !s.is_empty())
-				.ok_or(error!("Missing novel id"))?;
+			let id = title_id(page_props)?;
 			let mut url = format!("{API_URL}/titles/{id}/chapters");
 			if let Some(cv) = manga["cv"].as_i64() {
 				url.push_str(&format!("?cv={cv}"));
@@ -388,6 +385,15 @@ impl ListingProvider for NovelBuddy {
 	}
 }
 
+// The API keys titles by this short id, not by the slug used as the novel key.
+fn title_id(page_props: &Value) -> Result<&str> {
+	page_props["mangaHsid"]
+		.as_str()
+		.or_else(|| page_props["initialManga"]["id"].as_str())
+		.filter(|s| !s.is_empty())
+		.ok_or(error!("Missing novel id"))
+}
+
 // A path the site does not serve still answers with page props, carrying an
 // "httpError" object instead of the page's data. Surface its message rather than
 // letting the caller report a generic missing-payload error.
@@ -469,7 +475,7 @@ fn parse_timestamp(value: &str) -> Option<i64> {
 	parse_date(value, DATE_FORMAT)
 }
 
-register_source!(NovelBuddy, ListingProvider, Home);
+register_source!(NovelBuddy, ListingProvider, Home, ReviewProvider);
 
 #[cfg(test)]
 mod test {
@@ -554,5 +560,37 @@ mod test {
 			);
 			assert!(!result.entries.is_empty(), "{id}");
 		}
+	}
+
+	#[buny_test]
+	fn test_reviews() {
+		use buny::ReviewProvider;
+		let novel = Novel {
+			key: "shadow-slave".into(),
+			..Default::default()
+		};
+		let source = NovelBuddy::new();
+		let result = source.get_novel_reviews(novel.clone(), 1).unwrap();
+		println!(
+			"{} reviews, next: {}",
+			result.entries.len(),
+			result.has_next_page
+		);
+		if let Some(r) = result.entries.first() {
+			println!("{r:?}");
+		}
+		assert!(!result.entries.is_empty());
+		assert!(result.has_next_page);
+		for r in &result.entries {
+			assert!(!r.author.is_empty());
+			assert!(r.content.as_deref().is_some_and(|c| !c.is_empty()));
+			assert!(
+				r.date
+					.is_some_and(|d| d > 1_262_304_000 && d < 4_102_444_800)
+			);
+		}
+		let past_end = source.get_novel_reviews(novel, 999).unwrap();
+		assert!(past_end.entries.is_empty());
+		assert!(!past_end.has_next_page);
 	}
 }
