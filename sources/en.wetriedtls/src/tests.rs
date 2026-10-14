@@ -404,3 +404,47 @@ fn test_content_conversion() {
 		"On the way.\n\nUntil I regressed."
 	);
 }
+
+#[buny_test]
+fn test_reviews() {
+	use buny::ReviewProvider;
+	let novel = Novel {
+		key: REGRESSOR.into(),
+		..Default::default()
+	};
+	let source = WeTriedTLS::new();
+	let result = source.get_novel_reviews(novel.clone(), 1).unwrap();
+	println!(
+		"{} reviews, next: {}",
+		result.entries.len(),
+		result.has_next_page
+	);
+	if let Some(r) = result.entries.first() {
+		println!("{r:?}");
+	}
+	assert_eq!(result.entries.len(), 10);
+	assert!(result.has_next_page);
+	for r in &result.entries {
+		assert!(!r.author.is_empty());
+		let content = r.content.as_deref().unwrap();
+		assert!(!content.is_empty() && !content.contains('<') && !content.contains("&#"));
+		assert!(r.rating.is_some_and(|x| (0.2..=1.0).contains(&x)));
+		assert!(
+			r.date
+				.is_some_and(|d| d > 1_262_304_000 && d < 4_102_444_800)
+		);
+	}
+	let past_end = source.get_novel_reviews(novel, 999).unwrap();
+	assert!(past_end.entries.is_empty());
+	assert!(!past_end.has_next_page);
+}
+
+#[buny_test]
+fn test_review_text() {
+	use crate::traits::review_provider::review_text;
+	assert_eq!(review_text("<p>It's peak</p><p></p><p></p>"), "It's peak");
+	assert_eq!(
+		review_text("I&#x27;ve read it.\n\n Great \nGOAT"),
+		"I've read it.\n\nGreat\n\nGOAT"
+	);
+}

@@ -460,7 +460,13 @@ fn unescape(text: &str) -> String {
 	out
 }
 
-register_source!(WeTriedTLS, ListingProvider, Home, DeepLinkHandler);
+register_source!(
+	WeTriedTLS,
+	ListingProvider,
+	Home,
+	DeepLinkHandler,
+	ReviewProvider
+);
 
 #[cfg(test)]
 mod tests;
