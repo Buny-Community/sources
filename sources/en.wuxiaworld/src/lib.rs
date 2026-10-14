@@ -154,7 +154,7 @@ impl Wuxiaworld {
 				status: STATUS_FINISHED,
 				..Default::default()
 			},
-			_ => bail!("Unknown listing: {id}"),
+			_ => return Err(error!("Unknown listing: {id}")),
 		};
 		search.page(page)
 	}

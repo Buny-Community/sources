@@ -379,7 +379,7 @@ pub fn call(method: &str, request: &Writer) -> Result<Vec<u8>> {
 	match messages.first() {
 		Some(frame) => Ok(frame.to_vec()),
 		None if status == Some(0) => Ok(Vec::new()),
-		None => bail!("Invalid response from the Wuxiaworld API"),
+		None => Err(error!("Invalid response from the Wuxiaworld API")),
 	}
 }
 
