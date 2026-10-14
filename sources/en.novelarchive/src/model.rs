@@ -58,3 +58,27 @@ pub struct ChapterData {
 pub struct ChapterResponse {
 	pub chapter: ChapterData,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CommentAuthor {
+	pub username: String,
+	#[serde(default)]
+	pub avatar: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Comment {
+	pub content: String,
+	pub created_at: String,
+	#[serde(default)]
+	pub author: Option<CommentAuthor>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CommentsResponse {
+	#[serde(default)]
+	pub comments: Vec<Comment>,
+	// Set instead of comments on failure, e.g. "Invalid novel id" with a 400.
+	#[serde(default)]
+	pub error: Option<String>,
+}

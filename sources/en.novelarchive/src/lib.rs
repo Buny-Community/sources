@@ -272,12 +272,12 @@ impl Source for NovelArchive {
 	}
 }
 
-register_source!(NovelArchive, ListingProvider, Home);
+register_source!(NovelArchive, ListingProvider, Home, ReviewProvider);
 
 #[cfg(test)]
 mod test {
 	use super::*;
-	use buny::{Home, HomeComponentValue};
+	use buny::{Home, HomeComponentValue, ReviewProvider};
 	use buny_test::buny_test;
 
 	#[buny_test]
@@ -372,5 +372,39 @@ mod test {
 			}
 		}
 		assert_eq!(home.components.len(), 4);
+	}
+
+	#[buny_test]
+	fn test_reviews() {
+		let novel = Novel {
+			key: "69faa859a5f4c7d1b734d496".into(),
+			..Default::default()
+		};
+		let source = NovelArchive::new();
+		let result = source.get_novel_reviews(novel.clone(), 1).unwrap();
+		println!("{} reviews", result.entries.len());
+		if let Some(r) = result.entries.first() {
+			println!("{r:?}");
+		}
+		assert!(result.entries.len() > 20);
+		assert!(!result.has_next_page);
+		for r in &result.entries {
+			assert!(!r.author.is_empty());
+			assert!(r.content.as_deref().is_some_and(|c| !c.is_empty()));
+			assert!(
+				r.date
+					.is_some_and(|d| d > 1_262_304_000 && d < 4_102_444_800)
+			);
+		}
+		assert!(result.entries.iter().any(|r| r.avatar.is_some()));
+		let page_2 = source.get_novel_reviews(novel, 2).unwrap();
+		assert!(page_2.entries.is_empty());
+		assert!(!page_2.has_next_page);
+
+		let missing = Novel {
+			key: "doesnotexist".into(),
+			..Default::default()
+		};
+		assert!(source.get_novel_reviews(missing, 1).is_err());
 	}
 }
