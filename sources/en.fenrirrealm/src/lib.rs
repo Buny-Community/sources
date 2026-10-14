@@ -518,7 +518,13 @@ fn unescape(text: &str) -> String {
 	out
 }
 
-register_source!(FenrirRealm, ListingProvider, Home, DeepLinkHandler);
+register_source!(
+	FenrirRealm,
+	ListingProvider,
+	Home,
+	DeepLinkHandler,
+	ReviewProvider
+);
 
 #[cfg(test)]
 mod tests;
