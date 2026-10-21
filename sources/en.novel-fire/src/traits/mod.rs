@@ -7,3 +7,4 @@ pub mod dynamic_settings;
 pub mod home;
 pub mod listingprovider;
 pub mod notification_handler;
+pub mod review_provider;

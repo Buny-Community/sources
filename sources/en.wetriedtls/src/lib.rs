@@ -82,7 +82,7 @@ impl WeTriedTLS {
 			"latest" => "updated_at",
 			"newest" => "created_at",
 			"top_rated" => "rating",
-			_ => bail!("Unknown listing: {id}"),
+			_ => return Err(error!("Unknown listing: {id}")),
 		};
 		let mut qs = QueryParameters::new();
 		qs.push("query_string", Some(""));
@@ -232,12 +232,16 @@ impl Source for WeTriedTLS {
 
 		if json["paywall"].as_bool().unwrap_or(false) {
 			match json["chapter"]["price"].as_i64() {
-				Some(price) if price > 0 => bail!(
-					"This chapter is premium on We Tried TLS ({price} coins). It can only be unlocked on the website."
-				),
-				_ => bail!(
-					"This chapter is premium on We Tried TLS. It can only be unlocked on the website."
-				),
+				Some(price) if price > 0 => {
+					return Err(error!(
+						"This chapter is premium on We Tried TLS ({price} coins). It can only be unlocked on the website."
+					));
+				}
+				_ => {
+					return Err(error!(
+						"This chapter is premium on We Tried TLS. It can only be unlocked on the website."
+					));
+				}
 			}
 		}
 
@@ -460,7 +464,13 @@ fn unescape(text: &str) -> String {
 	out
 }
 
-register_source!(WeTriedTLS, ListingProvider, Home, DeepLinkHandler);
+register_source!(
+	WeTriedTLS,
+	ListingProvider,
+	Home,
+	DeepLinkHandler,
+	ReviewProvider
+);
 
 #[cfg(test)]
 mod tests;

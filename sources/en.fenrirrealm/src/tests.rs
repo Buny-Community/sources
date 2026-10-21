@@ -694,3 +694,36 @@ fn test_plain_text() {
 		"One & two\n\nThree"
 	);
 }
+
+#[buny_test]
+fn test_reviews() {
+	use buny::ReviewProvider;
+	let novel = Novel {
+		key: "absolute-regression".into(),
+		..Default::default()
+	};
+	let source = FenrirRealm::new();
+	let result = source.get_novel_reviews(novel.clone(), 1).unwrap();
+	println!(
+		"{} reviews, next: {}",
+		result.entries.len(),
+		result.has_next_page
+	);
+	if let Some(r) = result.entries.first() {
+		println!("{r:?}");
+	}
+	assert!(!result.entries.is_empty());
+	assert!(result.has_next_page);
+	for r in &result.entries {
+		assert!(!r.author.is_empty());
+		assert!(r.content.as_deref().is_some_and(|c| !c.is_empty()));
+		assert!(
+			r.date
+				.is_some_and(|d| d > 1_262_304_000 && d < 4_102_444_800)
+		);
+	}
+	assert!(result.entries.iter().any(|r| r.avatar.is_some()));
+	let past_end = source.get_novel_reviews(novel, 999).unwrap();
+	assert!(past_end.entries.is_empty());
+	assert!(!past_end.has_next_page);
+}
